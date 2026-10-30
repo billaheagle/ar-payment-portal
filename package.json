@@ -3,9 +3,14 @@
     "@cap-js/cds-typer": ">=0.1",
     "@cap-js/cds-types": "^0.18.0",
     "@cap-js/sqlite": "^3",
+    "@eslint/js": "10.0.1",
     "@types/node": "24.19.2",
+    "eslint": "10.13.0",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.9.10",
     "tsx": "^4",
-    "typescript": "^7.0.0"
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1"
   },
   "imports": {
     "#cds-models/*": "./@cds-models/*/index.js"
@@ -13,6 +18,13 @@
   "scripts": {
     "watch": "cds-tsx watch",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test \"test/**/*.test.ts\""
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "typer": "cds-typer \"*\" --outputDirectory @cds-models"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }
