@@ -9,6 +9,9 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "allowJs": true,
+    "types": [
+      "node"
+    ],
     "paths": {
       "@sap/cds": [
         "./node_modules/@cap-js/cds-types"
@@ -17,5 +20,11 @@
         "./@cds-models/*"
       ]
     }
-  }
+  },
+  "include": [
+    "srv",
+    "test",
+    "server.ts",
+    "@cds-models"
+  ]
 }
