@@ -2,7 +2,6 @@ import { toCents } from '../../money';
 
 const DIGITS_RE = /^\d+$/;
 const DATS_RE = /^(\d{4})(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$/;
-const ISO_DATE_RE = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/;
 
 export const alphaOut = (value: string): string => {
   const s = value.trim();
@@ -25,15 +24,6 @@ export const datsToIso = (value: string): string => {
   if (m === null) throw new Error(`Invalid DATS date: ${value}`);
   const [, year = '', month = '', day = ''] = m;
   return `${year}-${month}-${day}`;
-};
-
-export const addDays = (value: string, days: number): string => {
-  if (!Number.isInteger(days)) throw new Error(`Days must be an integer: ${String(days)}`);
-  const m = ISO_DATE_RE.exec(value.trim());
-  if (m === null) throw new Error(`Invalid ISO date: ${value}`);
-  const [, year = '', month = '', day = ''] = m;
-  const time = Date.UTC(Number(year), Number(month) - 1, Number(day) + days);
-  return new Date(time).toISOString().slice(0, 10);
 };
 
 export const signedCents = (value: number | string, indicator: 'S' | 'H'): number => {

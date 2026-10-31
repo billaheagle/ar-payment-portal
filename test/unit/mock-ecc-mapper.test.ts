@@ -4,7 +4,6 @@ import {
   alphaOut,
   alphaIn,
   datsToIso,
-  addDays,
   signedCents,
 } from '../../srv/lib/datasource/mock-ecc/mock-ecc-mapper';
 
@@ -64,36 +63,6 @@ describe('mock ECC mapper (spec 10.3)', () => {
 
     it('throws on an invalid DATS value', () => {
       assert.throws(() => datsToIso('2026101'));
-    });
-  });
-
-  describe('addDays', () => {
-    it('adds days within the same year', () => {
-      assert.equal(addDays('2026-10-05', 30), '2026-11-04');
-    });
-
-    it('rolls over to the next year', () => {
-      assert.equal(addDays('2026-12-31', 1), '2027-01-01');
-    });
-
-    it('handles a leap year', () => {
-      assert.equal(addDays('2028-02-28', 1), '2028-02-29');
-    });
-
-    it('is not affected by daylight saving time', () => {
-      assert.equal(addDays('2026-03-28', 2), '2026-03-30');
-    });
-
-    it('supports negative days', () => {
-      assert.equal(addDays('2026-11-04', -30), '2026-10-05');
-    });
-
-    it('throws on fractional days', () => {
-      assert.throws(() => addDays('2026-03-28', 1.5));
-    });
-
-    it('throws on a non-ISO date', () => {
-      assert.throws(() => addDays('2026/03/28', 1));
     });
   });
 
