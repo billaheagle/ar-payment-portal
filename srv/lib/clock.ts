@@ -14,5 +14,5 @@ export const resetClock = (): void => {
 };
 
 export const today = (): string => {
-  return now().toISOString().split('T')[0];
+  return now().toISOString().slice(0, 10);
 };
