@@ -22,7 +22,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "node --import tsx --test \"test/**/*.test.ts\"",
-    "typer": "cds-typer \"*\" --outputDirectory @cds-models"
+    "typer": "cds-typer \"*\" --outputDirectory @cds-models",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm test"
   },
   "allowScripts": {
     "esbuild@0.28.2": true
