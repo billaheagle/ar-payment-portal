@@ -16,17 +16,17 @@ Built with **SAP CAP (Node.js, strict TypeScript)** and **SAPUI5** (Fiori Elemen
 
 ## Status
 
-| Area | Status |
-| --- | --- |
-| Project setup: CAP + strict TypeScript, ESLint, Prettier, GitHub Actions CI | ✅ Done |
+| Area                                                                                                                      | Status               |
+| ------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| Project setup: CAP + strict TypeScript, ESLint, Prettier, GitHub Actions CI                                               | ✅ Done              |
 | Pure helpers: money, clock, dates, ECC mapper, overdue, payment reference, request hash, retry backoff, webhook signature | ✅ Done, unit-tested |
-| CDS data model, seed data, Open Items list report | ⏳ Next |
-| DataSource abstraction (mock ECC, mock S/4, S/4 sandbox) | Planned |
-| Per-business-partner authorisation | Planned |
-| Payments and mock payment provider | Planned |
-| Webhooks, outbox, reliability | Planned |
-| PostgreSQL, reconcile job, multi-instance | Planned |
-| Disputes | Planned |
+| CDS data model, seed data, Open Items list report                                                                         | ⏳ Next              |
+| DataSource abstraction (mock ECC, mock S/4, S/4 sandbox)                                                                  | Planned              |
+| Per-business-partner authorisation                                                                                        | Planned              |
+| Payments and mock payment provider                                                                                        | Planned              |
+| Webhooks, outbox, reliability                                                                                             | Planned              |
+| PostgreSQL, reconcile job, multi-instance                                                                                 | Planned              |
+| Disputes                                                                                                                  | Planned              |
 
 ## Getting started
 
@@ -40,14 +40,14 @@ npm test             # unit tests
 
 ## Scripts
 
-| Script | What it does |
-| --- | --- |
-| `npm run watch` | Start CAP with live reload; TypeScript is loaded through `tsx` |
-| `npm test` | Run all tests with the Node.js test runner (`node:test`) |
-| `npm run typecheck` | Type-check the project with `tsc --noEmit` |
-| `npm run lint` | ESLint with `typescript-eslint` strict type-checked rules |
-| `npm run format` | Format all files with Prettier |
-| `npm run format:check` | Check formatting without changing files (used in CI) |
+| Script                 | What it does                                                   |
+| ---------------------- | -------------------------------------------------------------- |
+| `npm run watch`        | Start CAP with live reload; TypeScript is loaded through `tsx` |
+| `npm test`             | Run all tests with the Node.js test runner (`node:test`)       |
+| `npm run typecheck`    | Type-check the project with `tsc --noEmit`                     |
+| `npm run lint`         | ESLint with `typescript-eslint` strict type-checked rules      |
+| `npm run format`       | Format all files with Prettier                                 |
+| `npm run format:check` | Check formatting without changing files (used in CI)           |
 
 CI runs `npm ci`, lint, format check, type check, tests and `npm audit --audit-level=high` on every push and pull request.
 
