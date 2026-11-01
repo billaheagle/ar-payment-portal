@@ -6,16 +6,17 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "sourceMap": true,
     "allowJs": true,
+    "types": ["node"],
     "paths": {
-      "@sap/cds": [
-        "./node_modules/@cap-js/cds-types"
-      ],
-      "#cds-models/*": [
-        "./@cds-models/*"
-      ]
+      "@sap/cds": ["./node_modules/@cap-js/cds-types"],
+      "#cds-models/*": ["./@cds-models/*"]
     }
-  }
+  },
+  "include": ["srv", "test", "server.ts", "@cds-models"]
 }
