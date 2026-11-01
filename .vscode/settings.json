@@ -1,0 +1,19 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "[cds]": {
+    "editor.defaultFormatter": "SAPSE.vscode-cds"
+  },
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "js/ts.preferences.autoImportSpecifierExcludeRegexes": ["^@sap/cds"],
+  "files.eol": "\n",
+  "search.exclude": {
+    "**/node_modules": true,
+    "@cds-models": true,
+    "gen": true
+  }
+}
