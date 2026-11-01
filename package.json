@@ -1,14 +1,16 @@
 {
   "devDependencies": {
-    "@cap-js/cds-typer": ">=0.1",
-    "@cap-js/cds-types": "^0.18.0",
-    "@cap-js/sqlite": "^3",
+    "@cap-js/cds-test": "1.0.2",
+    "@cap-js/cds-typer": "0.41.1",
+    "@cap-js/cds-types": "0.18.0",
+    "@cap-js/sqlite": "3.1.2",
     "@eslint/js": "10.0.1",
     "@types/node": "24.19.2",
+    "axios": "1.21.0",
     "eslint": "10.13.0",
     "eslint-config-prettier": "10.1.8",
     "prettier": "3.9.10",
-    "tsx": "^4",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1"
   },
@@ -27,5 +29,44 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "cds": {
+    "requires": {
+      "auth": {
+        "kind": "mocked",
+        "users": {
+          "alice@acme.test": {
+            "password": "test",
+            "roles": [
+              "CustomerUser"
+            ]
+          },
+          "carol@acme.test": {
+            "password": "test",
+            "roles": [
+              "CustomerUser"
+            ]
+          },
+          "bob@globex.test": {
+            "password": "test",
+            "roles": [
+              "CustomerUser"
+            ]
+          },
+          "dave@nobody.test": {
+            "password": "test",
+            "roles": [
+              "CustomerUser"
+            ]
+          },
+          "admin@portal.test": {
+            "password": "test",
+            "roles": [
+              "PortalAdmin"
+            ]
+          }
+        }
+      }
+    }
   }
 }
