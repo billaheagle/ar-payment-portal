@@ -52,17 +52,18 @@ Open the Open Items app from the index page at `http://localhost:4004` and sign 
 
 ## Scripts
 
-| Script                    | What it does                                                                |
-| ------------------------- | --------------------------------------------------------------------------- |
-| `npm run watch`           | Start CAP with live reload; TypeScript is loaded through `tsx`              |
-| `npm run watch-openitems` | Same, and open the Open Items app in the browser                            |
-| `npm run typer`           | Generate TypeScript types from the CDS model into `@cds-models/`            |
-| `npm test`                | Run unit and integration tests with the Node.js test runner (`node:test`)   |
-| `npm run typecheck`       | Type-check the backend with `tsc --noEmit`                                  |
-| `npm run lint`            | ESLint with `typescript-eslint` strict type-checked rules                   |
-| `npm run format`          | Format all files with Prettier                                              |
-| `npm run format:check`    | Check formatting without changing files (used in CI)                        |
-| `npm run check`           | Lint, format check, type check and tests in one go; run before every commit |
+| Script                    | What it does                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `npm run watch`           | Start CAP for backend work (UI5 plugin disabled, fast restarts)              |
+| `npm run watch:ui`        | Start CAP with the UI5 app served through `cds-plugin-ui5` (needs 4 GB heap) |
+| `npm run watch-openitems` | Same, and open the Open Items app in the browser                             |
+| `npm run typer`           | Generate TypeScript types from the CDS model into `@cds-models/`             |
+| `npm test`                | Run unit and integration tests with the Node.js test runner (`node:test`)    |
+| `npm run typecheck`       | Type-check the backend with `tsc --noEmit`                                   |
+| `npm run lint`            | ESLint with `typescript-eslint` strict type-checked rules                    |
+| `npm run format`          | Format all files with Prettier                                               |
+| `npm run format:check`    | Check formatting without changing files (used in CI)                         |
+| `npm run check`           | Lint, format check, type check and tests in one go; run before every commit  |
 
 CI runs `npm ci`, type generation, lint, format check, type check, tests and a production dependency audit on every push and pull request.
 
@@ -113,6 +114,7 @@ test/
 - `cds-plugin-ui5` serves the UI5 app through `cds watch`.
 - `@cap-js/cds-test` provides `cds.test()` for integration tests; `axios` (dev only) supplies the response types that `@cap-js/cds-types` uses for it.
 - No secrets are committed; `.env` and `.cdsrc-private.json` are ignored.
+- Tests run with `CDS_PLUGIN_UI5_ACTIVE=false`: integration tests only need the OData service, and starting the UI5 tooling in every `cds.test()` server exhausts memory.
 
 ## Conventions
 

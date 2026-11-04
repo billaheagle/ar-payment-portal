@@ -19,7 +19,8 @@
     "#cds-models/*": "./@cds-models/*/index.js"
   },
   "scripts": {
-    "watch": "cds-tsx watch",
+    "watch": "CDS_PLUGIN_UI5_ACTIVE=false cds-tsx watch",
+    "watch:ui": "NODE_OPTIONS=--max-old-space-size=4096 cds-tsx watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -27,7 +28,7 @@
     "test": "CDS_PLUGIN_UI5_ACTIVE=false node --import tsx --test \"test/**/*.test.ts\"",
     "typer": "cds-typer \"*\" --outputDirectory @cds-models",
     "check": "npm run lint && npm run format:check && npm run typecheck && npm test",
-    "watch-openitems": "cds-tsx watch --open arportal.openitems/index.html?sap-ui-xx-viewCache=false --livereload false"
+    "watch-openitems": "NODE_OPTIONS=--max-old-space-size=4096 cds-tsx watch --open arportal.openitems/index.html?sap-ui-xx-viewCache=false --livereload false"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
