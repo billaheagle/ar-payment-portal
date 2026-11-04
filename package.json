@@ -24,7 +24,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "test": "CDS_PLUGIN_UI5_ACTIVE=false node --import tsx --test \"test/**/*.test.ts\"",
     "typer": "cds-typer \"*\" --outputDirectory @cds-models",
     "check": "npm run lint && npm run format:check && npm run typecheck && npm test",
     "watch-openitems": "cds-tsx watch --open arportal.openitems/index.html?sap-ui-xx-viewCache=false --livereload false"
