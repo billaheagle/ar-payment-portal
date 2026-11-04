@@ -11,12 +11,13 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "allowJs": true,
+    "noEmit": true,
+    "allowJs": false,
     "types": ["node"],
     "paths": {
       "@sap/cds": ["./node_modules/@cap-js/cds-types"],
       "#cds-models/*": ["./@cds-models/*"]
     }
   },
-  "include": ["srv", "test", "server.ts", "@cds-models"]
+  "include": ["srv", "test", "server.ts"]
 }

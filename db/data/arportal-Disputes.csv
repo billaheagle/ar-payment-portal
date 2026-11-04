@@ -1,0 +1,2 @@
+ID;DisputeNumber;BusinessPartner;CompanyCode;FiscalYear;AccountingDocument;LineItem;Reason;Description;DisputedAmount;Currency_code;Status;createdBy;createdAt
+1b2bc197-4fe5-481a-acb9-2d9ea5ef358e;DSP-1B2BC197;1000001;1010;2026;1800000005;001;PRICE;Unit price differs from the agreed contract price.;300.00;EUR;OPEN;alice@acme.test;2026-10-28T10:00:00Z

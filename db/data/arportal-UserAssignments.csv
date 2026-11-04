@@ -1,0 +1,5 @@
+ID;UserId;BusinessPartner;CanView;CanPay;CanDispute;IsActive
+d5a70343-2310-42ca-9ed1-9d996b8536ce;alice@acme.test;1000001;true;true;true;true
+d4be6aab-e463-4c11-939d-9e0215392cc8;alice@acme.test;1000002;true;false;false;true
+11827651-7044-4b2b-a510-6c5f776e6895;carol@acme.test;1000001;true;false;false;true
+a7ca5e58-c25b-43d3-95f8-8468b1549d1b;bob@globex.test;1000003;true;true;false;true

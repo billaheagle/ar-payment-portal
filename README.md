@@ -2,7 +2,7 @@
 
 A learning project: a B2B customer portal where users see the open accounts-receivable items of the business partners assigned to them and pay those items, fully or partially, through a payment provider. Payments are then posted back to SAP reliably and idempotently.
 
-Built with **SAP CAP (Node.js, strict TypeScript)** and **SAPUI5** (Fiori Elements and freestyle).
+Built with **SAP CAP (Node.js, strict TypeScript)** and **SAPUI5** (Fiori Elements and freestyle, TypeScript).
 
 > This is a personal learning project, not production software. The SAP backends and the payment provider are mocks.
 
@@ -16,56 +16,80 @@ Built with **SAP CAP (Node.js, strict TypeScript)** and **SAPUI5** (Fiori Elemen
 
 ## Status
 
-| Area                                                                                                                      | Status               |
-| ------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| Project setup: CAP + strict TypeScript, ESLint, Prettier, GitHub Actions CI                                               | ✅ Done              |
-| Pure helpers: money, clock, dates, ECC mapper, overdue, payment reference, request hash, retry backoff, webhook signature | ✅ Done, unit-tested |
-| CDS data model, seed data, Open Items list report                                                                         | ⏳ Next              |
-| DataSource abstraction (mock ECC, mock S/4, S/4 sandbox)                                                                  | Planned              |
-| Per-business-partner authorisation                                                                                        | Planned              |
-| Payments and mock payment provider                                                                                        | Planned              |
-| Webhooks, outbox, reliability                                                                                             | Planned              |
-| PostgreSQL, reconcile job, multi-instance                                                                                 | Planned              |
-| Disputes                                                                                                                  | Planned              |
+| Area                                                                                                                      | Status                      |
+| ------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| Project setup: CAP + strict TypeScript, ESLint, Prettier, GitHub Actions CI                                               | ✅ Done                     |
+| Pure helpers: money, clock, dates, ECC mapper, overdue, payment reference, request hash, retry backoff, webhook signature | ✅ Done, unit-tested        |
+| CDS data model, mock SAP tables, seed data                                                                                | ✅ Done                     |
+| `CustomerService` with mocked users and an `OpenItems` read handler                                                       | ✅ Done, integration-tested |
+| Open Items list report (Fiori Elements, TypeScript)                                                                       | ✅ Done                     |
+| DataSource abstraction (mock ECC, mock S/4, S/4 sandbox) and OData query translation                                      | ⏳ Next                     |
+| Per-business-partner authorisation                                                                                        | Planned                     |
+| Payments and mock payment provider                                                                                        | Planned                     |
+| Webhooks, outbox, reliability                                                                                             | Planned                     |
+| PostgreSQL, reconcile job, multi-instance                                                                                 | Planned                     |
+| Disputes                                                                                                                  | Planned                     |
 
 ## Getting started
 
-Requirements: Node.js 22 and the CAP CLI (`npm i -g @sap/cds-dk`).
+Requirements: Node.js 24 and the CAP CLI (`npm i -g @sap/cds-dk`).
 
 ```bash
 npm ci
+npm run typer        # generate TypeScript types from the CDS model
 npm run watch        # CAP server on http://localhost:4004
-npm test             # unit tests
 ```
+
+Open the Open Items app from the index page at `http://localhost:4004` and sign in with a mocked user:
+
+| User                | Password | Role                                |
+| ------------------- | -------- | ----------------------------------- |
+| `alice@acme.test`   | `test`   | CustomerUser                        |
+| `carol@acme.test`   | `test`   | CustomerUser                        |
+| `bob@globex.test`   | `test`   | CustomerUser                        |
+| `dave@nobody.test`  | `test`   | CustomerUser (no business partners) |
+| `admin@portal.test` | `test`   | PortalAdmin                         |
 
 ## Scripts
 
-| Script                 | What it does                                                   |
-| ---------------------- | -------------------------------------------------------------- |
-| `npm run watch`        | Start CAP with live reload; TypeScript is loaded through `tsx` |
-| `npm test`             | Run all tests with the Node.js test runner (`node:test`)       |
-| `npm run typecheck`    | Type-check the project with `tsc --noEmit`                     |
-| `npm run lint`         | ESLint with `typescript-eslint` strict type-checked rules      |
-| `npm run format`       | Format all files with Prettier                                 |
-| `npm run format:check` | Check formatting without changing files (used in CI)           |
+| Script                    | What it does                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `npm run watch`           | Start CAP for backend work (UI5 plugin disabled, fast restarts)              |
+| `npm run watch:ui`        | Start CAP with the UI5 app served through `cds-plugin-ui5` (needs 4 GB heap) |
+| `npm run watch-openitems` | Same, and open the Open Items app in the browser                             |
+| `npm run typer`           | Generate TypeScript types from the CDS model into `@cds-models/`             |
+| `npm test`                | Run unit and integration tests with the Node.js test runner (`node:test`)    |
+| `npm run typecheck`       | Type-check the backend with `tsc --noEmit`                                   |
+| `npm run lint`            | ESLint with `typescript-eslint` strict type-checked rules                    |
+| `npm run format`          | Format all files with Prettier                                               |
+| `npm run format:check`    | Check formatting without changing files (used in CI)                         |
+| `npm run check`           | Lint, format check, type check and tests in one go; run before every commit  |
 
-CI runs `npm ci`, lint, format check, type check, tests and `npm audit --audit-level=high` on every push and pull request.
+CI runs `npm ci`, type generation, lint, format check, type check, tests and a production dependency audit on every push and pull request.
 
 ## Project structure
 
 ```text
-srv/lib/
-  money.ts                          amounts as integer cents
-  clock.ts                          injectable clock for "now" and "today"
-  dates.ts                          ISO date helpers, always in UTC
-  datasource/mock-ecc/
-    mock-ecc-mapper.ts              ECC formats: ALPHA conversion, DATS dates, debit/credit sign
-  open-items/overdue.ts             days overdue for an open item
-  payment/references.ts             payment reference (PAY-XXXXXXXX), UUID v4 check
-  payment/request-hash.ts           SHA-256 fingerprint of a payment request
-  jobs/backoff.ts                   retry schedule for posting to SAP
-  psp/signature.ts                  HMAC signing and verification of webhooks
-test/unit/                          one test file per module
+app/openitems/                      Fiori Elements list report (UI5, TypeScript)
+db/
+  types.cds                         enums and the ItemKey aspect
+  schema.cds                        portal entities and virtual entities
+  mock.cds                          mock SAP tables (ECC and S/4 shapes)
+  data/                             seed data (CSV)
+srv/
+  customer-service.cds / .ts        CustomerService definition and handlers
+  lib/
+    money.ts                        amounts as integer cents
+    clock.ts                        injectable clock for "now" and "today"
+    dates.ts                        ISO date helpers, always in UTC
+    datasource/mock-ecc/            ECC formats: ALPHA conversion, DATS dates, debit/credit sign
+    open-items/                     open item mapping, overdue calculation, read handler
+    payment/                        payment reference, UUID v4 check, request hash
+    jobs/backoff.ts                 retry schedule for posting to SAP
+    psp/signature.ts                HMAC signing and verification of webhooks
+test/
+  unit/                             pure-function tests, one file per module
+  integration/                      tests against a running CAP server (cds.test)
 .github/workflows/ci.yml            CI pipeline
 ```
 
@@ -75,19 +99,26 @@ test/unit/                          one test file per module
 - **Dates are calculated in UTC.** Date arithmetic uses `Date.UTC` and ISO strings, so results do not depend on the machine's time zone or daylight saving time.
 - **"Now" is injected.** All time-dependent logic reads from an injectable clock, or receives the time as a parameter, so tests are deterministic.
 - **SAP identifiers are strings.** Customer, document and material numbers are never converted to numbers, because JavaScript numbers lose precision beyond 15–16 digits.
+- **Open items belong to SAP, not to the portal.** `OpenItems` and `BusinessPartners` are virtual entities (`@cds.persistence.skip`); a read handler fills them from the backend instead of a portal table.
+- **Mock ECC and S/4 tables keep their original shapes.** ECC stores dates as `YYYYMMDD`, unsigned amounts with a debit/credit indicator and zero-padded customer numbers; S/4 uses ISO dates and signed amounts. Mappers translate both into one model.
 - **Pure functions first.** Business rules live in small pure functions under `srv/lib/` that can be tested without starting CAP; service handlers stay thin.
 - **Failures are explicit.** Invalid input throws; expected business outcomes (such as retries being exhausted or a webhook being rejected) are returned as values.
 
 ## Dependencies and security
 
 - `.npmrc` sets `save-exact=true`, `package-lock.json` is committed, and CI installs with `npm ci`.
-- TypeScript is pinned to 6.0.x because `typescript-eslint` does not support 7.x yet. Re-check monthly with `npm view typescript-eslint peerDependencies`.
-- Install scripts are only allowed after review; `esbuild` (a dependency of `tsx`) has been reviewed and approved.
-- CI fails on `npm audit` findings of high severity.
+- TypeScript is pinned to 6.0.x for the whole repository because `typescript-eslint` does not support 7.x yet. Re-check monthly with `npm view typescript-eslint peerDependencies`.
+- `@sap/cds` is pinned to the 10.x line that matches `@sap/cds-dk` 10 and the `@cap-js/*` packages.
+- Install scripts are only allowed after review (`allowScripts` in `package.json`): `esbuild` (used by `tsx`) and `ui5-tooling-transpile` (compiles the app's TypeScript).
+- CI blocks high-severity advisories in production dependencies only (`npm audit --omit=dev`). Current advisories are all in development tooling (UI5 tooling via `cds-plugin-ui5`, ESLint via `minimatch`) and have no non-breaking fix yet. Re-check monthly with `npm audit`.
+- `cds-plugin-ui5` serves the UI5 app through `cds watch`.
+- `@cap-js/cds-test` provides `cds.test()` for integration tests; `axios` (dev only) supplies the response types that `@cap-js/cds-types` uses for it.
 - No secrets are committed; `.env` and `.cdsrc-private.json` are ignored.
+- Tests run with `CDS_PLUGIN_UI5_ACTIVE=false`: integration tests only need the OData service, and starting the UI5 tooling in every `cds.test()` server exhausts memory.
 
 ## Conventions
 
-- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`.
-- Test names reference the business rule they cover, for example `BR-12`.
+- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `refactor`, `test`, `docs`, `style`, `chore`, `ci`.
+- Test names reference the business rule or specification section they cover, for example `BR-12` or `spec 15.2`.
+- CDS elements use PascalCase to match SAP APIs; TypeScript variables use camelCase.
 - One branch per week (`w1/foundation`, `w2/data-model`, …), merged into `main` through a pull request with green CI.

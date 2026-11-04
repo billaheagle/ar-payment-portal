@@ -1,14 +1,17 @@
 {
   "devDependencies": {
-    "@cap-js/cds-typer": ">=0.1",
-    "@cap-js/cds-types": "^0.18.0",
-    "@cap-js/sqlite": "^3",
+    "@cap-js/cds-test": "1.0.2",
+    "@cap-js/cds-typer": "0.41.1",
+    "@cap-js/cds-types": "0.18.0",
+    "@cap-js/sqlite": "3.1.2",
     "@eslint/js": "10.0.1",
     "@types/node": "24.19.2",
+    "axios": "1.21.0",
+    "cds-plugin-ui5": "0.17.4",
     "eslint": "10.13.0",
     "eslint-config-prettier": "10.1.8",
     "prettier": "3.9.10",
-    "tsx": "^4",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1"
   },
@@ -16,15 +19,67 @@
     "#cds-models/*": "./@cds-models/*/index.js"
   },
   "scripts": {
-    "watch": "cds-tsx watch",
+    "watch": "CDS_PLUGIN_UI5_ACTIVE=false cds-tsx watch",
+    "watch:ui": "NODE_OPTIONS=--max-old-space-size=4096 cds-tsx watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --import tsx --test \"test/**/*.test.ts\"",
-    "typer": "cds-typer \"*\" --outputDirectory @cds-models"
+    "test": "CDS_PLUGIN_UI5_ACTIVE=false node --import tsx --test \"test/**/*.test.ts\"",
+    "typer": "cds-typer \"*\" --outputDirectory @cds-models",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm test",
+    "watch-openitems": "NODE_OPTIONS=--max-old-space-size=4096 cds-tsx watch --open arportal.openitems/index.html?sap-ui-xx-viewCache=false --livereload false"
   },
   "allowScripts": {
-    "esbuild@0.28.2": true
-  }
+    "esbuild@0.28.2": true,
+    "ui5-tooling-transpile@3.12.0": true
+  },
+  "cds": {
+    "requires": {
+      "auth": {
+        "kind": "mocked",
+        "users": {
+          "alice@acme.test": {
+            "password": "test",
+            "roles": [
+              "CustomerUser"
+            ]
+          },
+          "carol@acme.test": {
+            "password": "test",
+            "roles": [
+              "CustomerUser"
+            ]
+          },
+          "bob@globex.test": {
+            "password": "test",
+            "roles": [
+              "CustomerUser"
+            ]
+          },
+          "dave@nobody.test": {
+            "password": "test",
+            "roles": [
+              "CustomerUser"
+            ]
+          },
+          "admin@portal.test": {
+            "password": "test",
+            "roles": [
+              "PortalAdmin"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@sap/cds": "10.2.2"
+  },
+  "workspaces": [
+    "app/*"
+  ],
+  "sapux": [
+    "app/openitems"
+  ]
 }
