@@ -7,6 +7,7 @@
     "@eslint/js": "10.0.1",
     "@types/node": "24.19.2",
     "axios": "1.21.0",
+    "cds-plugin-ui5": "0.17.4",
     "eslint": "10.13.0",
     "eslint-config-prettier": "10.1.8",
     "prettier": "3.9.10",
@@ -25,10 +26,12 @@
     "format:check": "prettier --check .",
     "test": "node --import tsx --test \"test/**/*.test.ts\"",
     "typer": "cds-typer \"*\" --outputDirectory @cds-models",
-    "check": "npm run lint && npm run format:check && npm run typecheck && npm test"
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm test",
+    "watch-openitems": "cds-tsx watch --open arportal.openitems/index.html?sap-ui-xx-viewCache=false --livereload false"
   },
   "allowScripts": {
-    "esbuild@0.28.2": true
+    "esbuild@0.28.2": true,
+    "ui5-tooling-transpile@3.12.0": true
   },
   "cds": {
     "requires": {
@@ -68,5 +71,14 @@
         }
       }
     }
-  }
+  },
+  "dependencies": {
+    "@sap/cds": "10.2.2"
+  },
+  "workspaces": [
+    "app/*"
+  ],
+  "sapux": [
+    "app/openitems"
+  ]
 }
