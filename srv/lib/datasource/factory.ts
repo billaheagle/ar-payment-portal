@@ -1,5 +1,6 @@
 import cds from '@sap/cds';
 import type { ArDataSource } from './ar-datasource';
+import { MockS4DataSource } from './mock-s4/mock-s4-datasource';
 
 let instance: ArDataSource | undefined;
 
@@ -8,8 +9,9 @@ const readSetting = (): string =>
 
 const create = (kind: string): ArDataSource => {
   switch (kind) {
-    case 'mock-ecc':
     case 'mock-s4':
+      return new MockS4DataSource();
+    case 'mock-ecc':
     case 's4-sandbox':
       throw new Error(`DataSource '${kind}' is not implemented yet`);
     default:
@@ -17,7 +19,7 @@ const create = (kind: string): ArDataSource => {
   }
 };
 
-export const DataSource = (): ArDataSource => {
+export const dataSource = (): ArDataSource => {
   instance ??= create(readSetting());
   return instance;
 };

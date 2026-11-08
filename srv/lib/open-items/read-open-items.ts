@@ -1,71 +1,71 @@
-import { S4_OperationalAcctgDocItems, S4_BusinessPartners } from '#cds-models/arportal/mock';
-import type { S4_OperationalAcctgDocItem } from '#cds-models/arportal/mock';
-import { ItemType } from '#cds-models/arportal';
-import type { OpenItem } from '#cds-models/CustomerService';
-import { daysOverdue } from './overdue';
+import cds from '@sap/cds';
+import { UserAssignments } from '#cds-models/arportal';
+import type { OpenItem as OpenItemRow } from '#cds-models/CustomerService';
+import type { OpenItem, OpenItemQuery } from '../datasource/types';
+import { dataSource } from '../datasource/factory';
+import { fromCents } from '../money';
 import { today } from '../clock';
+import { daysOverdue } from './overdue';
+import { toCdsDate } from '../dates';
+
+const { SELECT } = cds.ql;
+
+const activeBusinessPartners = async (): Promise<string[]> => {
+  const rows = await SELECT.distinct
+    .from(UserAssignments)
+    .columns('BusinessPartner')
+    .where({ IsActive: true });
+
+  return rows.map((r) => String(r.BusinessPartner));
+};
 
 export const readOpenItems = async () => {
-  const docItems = await SELECT.from(S4_OperationalAcctgDocItems).where({
-    ClearingAccountingDocument: null,
-  });
-
-  const partners = await SELECT.from(S4_BusinessPartners);
-
-  // TODO 1: kamus BusinessPartner → nama (Object.fromEntries + map)
-  const bpNames: Record<string, string | null> = Object.fromEntries(
-    partners.map((p) => [String(p.BusinessPartner), p.BusinessPartnerFullName ?? null]),
-  );
-
-  // TODO 2: petakan docItems ke bentuk OpenItems (tabel di pesan sebelumnya)
   const todayIso = today();
-  const rows: OpenItem[] = docItems.map((row) => toOpenItem(row, bpNames, todayIso));
 
-  // TODO 3: return Object.assign(rows, { $count: rows.length })
-  return Object.assign(rows, { $count: rows.length });
+  const query: OpenItemQuery = {
+    businessPartners: await activeBusinessPartners(),
+    today: todayIso,
+    orderBy: { field: 'NetDueDate', direction: 'asc' },
+    top: 1000,
+    skip: 0,
+  };
+
+  const { openItems, total } = await dataSource().getOpenItems(query);
+  const rows = openItems.map((item) => toOpenItemRow(item, todayIso));
+
+  return Object.assign(rows, { $count: total });
 };
 
-const itemTypeOf = (row: S4_OperationalAcctgDocItem): ItemType => {
-  if (row.AccountingDocumentType === 'DZ' && row.InvoiceReference) return ItemType.RESIDUAL;
-  if ((row.AmountInTransactionCurrency ?? 0) < 0) return ItemType.CREDIT_MEMO;
-  return ItemType.INVOICE;
-};
-
-export const toOpenItem = (
-  row: S4_OperationalAcctgDocItem,
-  bpNames: Record<string, string | null>,
-  todayIso: string,
-): OpenItem => {
-  if (!row.NetDueDate) {
-    throw new Error(`Open item without net due date: ${String(row.AccountingDocument)}`);
-  }
-  const overdue = daysOverdue(row.NetDueDate, todayIso);
+export const toOpenItemRow = (item: OpenItem, todayIso: string): OpenItemRow => {
+  const overdue = daysOverdue(item.netDueDate, todayIso);
 
   return {
     // Key
-    CompanyCode: row.CompanyCode,
-    FiscalYear: row.FiscalYear,
-    AccountingDocument: row.AccountingDocument,
-    LineItem: row.AccountingDocumentItem,
+    CompanyCode: item.companyCode,
+    FiscalYear: item.fiscalYear,
+    AccountingDocument: item.accountingDocument,
+    LineItem: item.lineItem,
 
     // BP
-    BusinessPartner: row.Customer,
-    BusinessPartnerName: row.Customer ? (bpNames[row.Customer] ?? null) : null,
+    BusinessPartner: item.businessPartner,
+    BusinessPartnerName: item.businessPartnerName,
 
     // Document
-    ItemType: itemTypeOf(row),
-    BillingDocument: row.BillingDocument,
-    Reference: row.DocumentReferenceID,
-    InvoiceReference: row.InvoiceReference,
-    PostingDate: row.PostingDate,
-    DocumentDate: row.DocumentDate,
-    NetDueDate: row.NetDueDate,
+    ItemType: item.itemType,
+    BillingDocument: item.billingDocument,
+    Reference: item.reference,
+    InvoiceReference: item.invoiceReference,
+
+    // Date
+    PostingDate: toCdsDate(item.postingDate),
+    DocumentDate: toCdsDate(item.documentDate),
+    NetDueDate: toCdsDate(item.netDueDate),
 
     // Amount
-    Amount: row.AmountInTransactionCurrency,
-    Currency: row.TransactionCurrency,
+    Amount: Number(fromCents(item.amountCents)),
+    Currency: item.currency,
 
-    // Overdue
+    // Portal
     DaysOverdue: overdue,
     IsOverdue: overdue > 0,
     DaysOverdueCriticality: overdue > 0 ? 1 : 0,
