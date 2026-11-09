@@ -25,7 +25,7 @@ export const readOpenItems = async () => {
   const query: OpenItemQuery = {
     businessPartners: await activeBusinessPartners(),
     today: todayIso,
-    orderBy: { field: 'NetDueDate', direction: 'asc' },
+    orderBy: [{ field: 'NetDueDate', direction: 'asc' }],
     top: 1000,
     skip: 0,
   };

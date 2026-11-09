@@ -29,6 +29,11 @@ export interface BusinessPartner {
   country: string | null;
 }
 
+export interface OrderBy {
+  field: OrderByField;
+  direction: OrderByDirection;
+}
+
 export interface OpenItemQuery {
   businessPartners: string[];
   companyCode?: string;
@@ -36,7 +41,7 @@ export interface OpenItemQuery {
   currency?: string;
   overdue?: boolean;
   today: string;
-  orderBy: { field: OrderByField; direction: OrderByDirection };
+  orderBy: OrderBy[];
   top: number;
   skip: number;
 }
