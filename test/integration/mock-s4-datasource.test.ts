@@ -45,7 +45,6 @@ describe('MockS4DataSource.getOpenItemsByKeys (spec 10.1)', () => {
   });
 });
 
-// Query dasar: semua BP seed, tanggal spesifikasi 15, cukup besar untuk semua item
 const baseQuery = (overrides: Partial<OpenItemQuery> = {}): OpenItemQuery => ({
   businessPartners: ['1000001', '1000002', '1000003'],
   today: '2026-11-01',
@@ -206,6 +205,15 @@ describe('MockS4DataSource.getOpenItems (spec 10.2)', () => {
       assert.equal(openItems.length, 7);
       assert.equal(total, 7);
       assert.ok(!documentsOf(openItems).includes('1400000001'));
+      assert.deepEqual(documentsOf(openItems), [
+        '1800000001',
+        '1800000002',
+        '1800000003',
+        '1800000005',
+        '1800000006',
+        '1800000007',
+        '1800000008',
+      ]);
     });
   });
 });
