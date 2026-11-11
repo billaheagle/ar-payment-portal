@@ -10,17 +10,9 @@ import type {
   OrderByField,
 } from '../types';
 import { eccRowToOpenItem, eccRowToBusinessPartner, alphaIn } from './mock-ecc-mapper';
+import { bpNameMap, keyOf, unique } from '../shared';
 
 const { SELECT } = cds.ql;
-
-const unique = (values: string[]): string[] => [...new Set(values)];
-
-const keyOf = (
-  companyCode: string,
-  fiscalYear: string,
-  accountingDocument: string,
-  lineItem: string,
-): string => `${companyCode}|${fiscalYear}|${accountingDocument}|${lineItem}`;
 
 const buildWhere = (query: OpenItemQuery) => {
   const where: Record<string, unknown> = {};
@@ -111,9 +103,7 @@ export class MockEccDataSource implements ArDataSource {
       dataQuery,
     ]);
 
-    const bpNames: Record<string, string | null> = Object.fromEntries(
-      partners.map((p) => [p.businessPartner, p.name]),
-    );
+    const bpNames: Record<string, string | null> = bpNameMap(partners);
 
     // ECC has no net due date column (it is ZFBDT + ZBD1T) and WRBTR is unsigned,
     // so overdue filtering, sorting and paging happen in memory after mapping.
@@ -154,9 +144,7 @@ export class MockEccDataSource implements ArDataSource {
       wanted.has(keyOf(String(row.BUKRS), String(row.GJAHR), String(row.BELNR), String(row.BUZEI))),
     );
 
-    const bpNames: Record<string, string | null> = Object.fromEntries(
-      partners.map((p) => [p.businessPartner, p.name]),
-    );
+    const bpNames: Record<string, string | null> = bpNameMap(partners);
 
     return matching.map((row) => eccRowToOpenItem(row, bpNames));
   }

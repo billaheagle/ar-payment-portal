@@ -3,17 +3,9 @@ import { S4_OperationalAcctgDocItems, S4_BusinessPartners } from '#cds-models/ar
 import type { ArDataSource } from '../ar-datasource';
 import type { BusinessPartner, ItemKey, OpenItem, OpenItemQuery, OrderByField } from '../types';
 import { s4RowToBusinessPartner, s4RowToOpenItem } from './mock-s4-mapper';
+import { bpNameMap, keyOf, unique } from '../shared';
 
 const { SELECT } = cds.ql;
-
-const unique = (values: string[]): string[] => [...new Set(values)];
-
-const keyOf = (
-  companyCode: string,
-  fiscalYear: string,
-  accountingDocument: string,
-  lineItem: string,
-): string => `${companyCode}|${fiscalYear}|${accountingDocument}|${lineItem}`;
 
 const ORDER_COLUMN: Record<OrderByField, string> = {
   NetDueDate: 'NetDueDate',
@@ -104,9 +96,7 @@ export class MockS4DataSource implements ArDataSource {
       countQuery,
     ]);
 
-    const bpNames: Record<string, string | null> = Object.fromEntries(
-      partners.map((p) => [p.businessPartner, p.name]),
-    );
+    const bpNames: Record<string, string | null> = bpNameMap(partners);
 
     return {
       openItems: rows.map((row) => s4RowToOpenItem(row, bpNames)),
@@ -142,9 +132,7 @@ export class MockS4DataSource implements ArDataSource {
       ),
     );
 
-    const bpNames: Record<string, string | null> = Object.fromEntries(
-      partners.map((p) => [p.businessPartner, p.name]),
-    );
+    const bpNames: Record<string, string | null> = bpNameMap(partners);
 
     return matching.map((row) => s4RowToOpenItem(row, bpNames));
   }
