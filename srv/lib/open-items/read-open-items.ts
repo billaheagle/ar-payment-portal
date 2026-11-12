@@ -7,6 +7,8 @@ import { fromCents } from '../money';
 import { today } from '../clock';
 import { daysOverdue } from './overdue';
 import { toCdsDate } from '../dates';
+import type { CqnSelect, RequestedQuery } from './to-open-item-query';
+import { toRequestedQuery, UnsupportedQueryError } from './to-open-item-query';
 
 const { SELECT } = cds.ql;
 
@@ -19,15 +21,28 @@ const activeBusinessPartners = async (): Promise<string[]> => {
   return rows.map((r) => String(r.BusinessPartner));
 };
 
-export const readOpenItems = async () => {
+export const readOpenItems = async (req: cds.Request) => {
+  let requested: RequestedQuery;
+  try {
+    requested = toRequestedQuery(req.query.SELECT as CqnSelect);
+  } catch (error) {
+    if (error instanceof UnsupportedQueryError) {
+      return req.reject({ status: 400, code: 'UNSUPPORTED_QUERY', message: error.message });
+    }
+    throw error;
+  }
+
+  const allowed = await activeBusinessPartners();
+  const businessPartners = requested.businessPartners
+    ? allowed.filter((bp) => requested.businessPartners?.includes(bp))
+    : allowed;
+
   const todayIso = today();
 
   const query: OpenItemQuery = {
-    businessPartners: await activeBusinessPartners(),
+    ...requested,
+    businessPartners,
     today: todayIso,
-    orderBy: [{ field: 'NetDueDate', direction: 'asc' }],
-    top: 1000,
-    skip: 0,
   };
 
   const { openItems, total } = await dataSource().getOpenItems(query);

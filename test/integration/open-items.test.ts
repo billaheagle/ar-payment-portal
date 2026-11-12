@@ -14,6 +14,29 @@ const readAll = async (): Promise<OpenItem[]> => {
   return (res.data as ODataList).value;
 };
 
+type HttpError = {
+  response?: { status?: number; data?: { error?: { code?: string } } };
+};
+
+// Reads OpenItems with the given OData query options
+const readWith = async (options: string): Promise<{ items: OpenItem[]; count?: number }> => {
+  const res = await GET(`/odata/v4/customer/OpenItems?${options}`, alice);
+  const body = res.data as ODataList;
+  return { items: body.value, count: body['@odata.count'] };
+};
+
+const documentsOf = (items: OpenItem[]): string[] =>
+  items.map((i) => String(i.AccountingDocument)).sort();
+
+// The request must fail with 400 and the UNSUPPORTED_QUERY code
+const expectUnsupported = async (options: string): Promise<void> => {
+  await assert.rejects(GET(`/odata/v4/customer/OpenItems?${options}`, alice), (err: HttpError) => {
+    assert.equal(err.response?.status, 400);
+    assert.equal(err.response.data?.error?.code, 'UNSUPPORTED_QUERY');
+    return true;
+  });
+};
+
 const byDocument = (items: OpenItem[], doc: string): OpenItem => {
   const found = items.find((i) => i.AccountingDocument === doc);
   assert.ok(found, `Open item ${doc} not found`);
@@ -67,5 +90,90 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
 
   it('maps AccountingDocumentItem to LineItem', async () => {
     assert.equal(byDocument(await readAll(), '1800000001').LineItem, '001');
+  });
+
+  describe('OData query options (spec 9.3)', () => {
+    it('filters by company code', async () => {
+      const { items } = await readWith("$filter=CompanyCode eq '1710'");
+      assert.deepEqual(documentsOf(items), ['1800000006', '1800000008', '1800000009']);
+    });
+
+    it('filters overdue items', async () => {
+      const { items } = await readWith('$filter=IsOverdue eq true');
+      assert.deepEqual(documentsOf(items), [
+        '1800000001',
+        '1800000004',
+        '1800000008',
+        '1800000009',
+      ]);
+    });
+
+    it('filters credit memos', async () => {
+      const { items } = await readWith("$filter=ItemType eq 'CREDIT_MEMO'");
+      assert.deepEqual(documentsOf(items), ['1800000004', '1800000009']);
+    });
+
+    it('filters by one business partner', async () => {
+      const { items } = await readWith("$filter=BusinessPartner eq '1000003'");
+      assert.deepEqual(documentsOf(items), ['1800000008', '1800000009']);
+    });
+
+    it('filters by several business partners joined with or', async () => {
+      const { items } = await readWith(
+        "$filter=BusinessPartner eq '1000001' or BusinessPartner eq '1000002'",
+      );
+      assert.deepEqual(documentsOf(items), [
+        '1800000001',
+        '1800000002',
+        '1800000003',
+        '1800000004',
+        '1800000005',
+        '1800000006',
+        '1800000007',
+      ]);
+    });
+
+    it('combines a filter with an or-group', async () => {
+      const { items } = await readWith(
+        "$filter=CompanyCode eq '1010' and (BusinessPartner eq '1000001' or BusinessPartner eq '1000002')",
+      );
+      assert.deepEqual(documentsOf(items), [
+        '1800000001',
+        '1800000002',
+        '1800000003',
+        '1800000004',
+        '1800000005',
+        '1800000007',
+      ]);
+    });
+
+    it('pages the result and returns the full count', async () => {
+      const { items, count } = await readWith('$top=3&$skip=3&$count=true');
+      assert.equal(items.length, 3);
+      assert.equal(count, 9);
+    });
+
+    it('sorts by amount descending', async () => {
+      const { items } = await readWith('$orderby=Amount desc&$top=1');
+      assert.equal(items.length, 1);
+
+      const [first] = items;
+      assert.ok(first);
+      assert.equal(first.AccountingDocument, '1800000003');
+      assert.equal(Number(first.Amount), 2000);
+      assert.equal(first.Currency, 'EUR');
+    });
+
+    it('rejects $search with 400', async () => {
+      await expectUnsupported('$search=INV');
+    });
+
+    it('rejects a filter on an unsupported field', async () => {
+      await expectUnsupported("$filter=Reference eq 'INV-2026-0001'");
+    });
+
+    it('rejects an operator other than eq', async () => {
+      await expectUnsupported("$filter=CompanyCode ne '1010'");
+    });
   });
 });
