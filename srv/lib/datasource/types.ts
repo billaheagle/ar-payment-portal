@@ -1,6 +1,16 @@
-export type ItemType = 'INVOICE' | 'CREDIT_MEMO' | 'RESIDUAL';
-export type OrderByField = 'NetDueDate' | 'PostingDate' | 'Amount' | 'AccountingDocument';
-export type OrderByDirection = 'asc' | 'desc';
+export const ITEM_TYPE = ['INVOICE', 'CREDIT_MEMO', 'RESIDUAL'] as const;
+export type ItemType = (typeof ITEM_TYPE)[number];
+
+export const ORDER_BY_FIELDS = [
+  'NetDueDate',
+  'PostingDate',
+  'Amount',
+  'AccountingDocument',
+] as const;
+export type OrderByField = (typeof ORDER_BY_FIELDS)[number];
+
+export const ORDER_BY_DIRECTION = ['asc', 'desc'] as const;
+export type OrderByDirection = (typeof ORDER_BY_DIRECTION)[number];
 
 export interface ItemKey {
   companyCode: string;
