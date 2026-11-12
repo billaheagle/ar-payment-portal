@@ -2,6 +2,29 @@ using CustomerService as service from '../../srv/customer-service';
 
 annotate service.OpenItems with @(
     Capabilities.SearchRestrictions.Searchable: false,
+    Capabilities.FilterRestrictions           : {FilterExpressionRestrictions: [
+        {
+            Property          : CompanyCode,
+            AllowedExpressions: 'SingleValue',
+        },
+        {
+            Property          : Currency,
+            AllowedExpressions: 'SingleValue',
+        },
+        {
+            Property          : ItemType,
+            AllowedExpressions: 'SingleValue',
+        },
+        {
+            Property          : IsOverdue,
+            AllowedExpressions: 'SingleValue',
+        },
+        {
+            Property          : BusinessPartner,
+            AllowedExpressions: 'MultiValue',
+        }
+    ]},
+
     UI.HeaderInfo                             : {
         TypeName      : '{i18n>OpenItem}',
         TypeNamePlural: '{i18n>OpenItems}',
