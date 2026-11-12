@@ -8,6 +8,10 @@ service CustomerService {
 
     @readonly
     @cds.persistence.skip
+    @cds.query.limit: {
+        default: 30,
+        max    : 200
+    }
     entity OpenItems        as projection on db.OpenItems;
 
     @readonly
