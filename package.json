@@ -35,6 +35,9 @@
     "ui5-tooling-transpile@3.12.0": true
   },
   "cds": {
+    "arportal": {
+      "dataSource": "mock-s4"
+    },
     "requires": {
       "auth": {
         "kind": "mocked",

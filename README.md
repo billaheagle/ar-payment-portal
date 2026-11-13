@@ -16,19 +16,20 @@ Built with **SAP CAP (Node.js, strict TypeScript)** and **SAPUI5** (Fiori Elemen
 
 ## Status
 
-| Area                                                                                                                      | Status                      |
-| ------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| Project setup: CAP + strict TypeScript, ESLint, Prettier, GitHub Actions CI                                               | ✅ Done                     |
-| Pure helpers: money, clock, dates, ECC mapper, overdue, payment reference, request hash, retry backoff, webhook signature | ✅ Done, unit-tested        |
-| CDS data model, mock SAP tables, seed data                                                                                | ✅ Done                     |
-| `CustomerService` with mocked users and an `OpenItems` read handler                                                       | ✅ Done, integration-tested |
-| Open Items list report (Fiori Elements, TypeScript)                                                                       | ✅ Done                     |
-| DataSource abstraction (mock ECC, mock S/4, S/4 sandbox) and OData query translation                                      | ⏳ Next                     |
-| Per-business-partner authorisation                                                                                        | Planned                     |
-| Payments and mock payment provider                                                                                        | Planned                     |
-| Webhooks, outbox, reliability                                                                                             | Planned                     |
-| PostgreSQL, reconcile job, multi-instance                                                                                 | Planned                     |
-| Disputes                                                                                                                  | Planned                     |
+| Area                                                                                                                      | Status                                |
+| ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| Project setup: CAP + strict TypeScript, ESLint, Prettier, GitHub Actions CI                                               | ✅ Done                               |
+| Pure helpers: money, clock, dates, ECC mapper, overdue, payment reference, request hash, retry backoff, webhook signature | ✅ Done, unit-tested                  |
+| CDS data model, mock SAP tables, seed data                                                                                | ✅ Done                               |
+| Open Items list report (Fiori Elements, TypeScript)                                                                       | ✅ Done                               |
+| DataSource abstraction (mock ECC, mock S/4) with identical results                                                        | ✅ Done, unit- and integration-tested |
+| OData query translation (filters, sorting, paging, single item by key)                                                    | ✅ Done, unit- and integration-tested |
+| Per-business-partner authorisation                                                                                        | ⏳ Next                               |
+| Payments and mock payment provider                                                                                        | Planned                               |
+| Webhooks, outbox, reliability                                                                                             | Planned                               |
+| PostgreSQL, reconcile job, multi-instance                                                                                 | Planned                               |
+| Disputes                                                                                                                  | Planned                               |
+| S/4 sandbox data source (SAP API Business Hub)                                                                            | Planned                               |
 
 ## Getting started
 
@@ -37,7 +38,8 @@ Requirements: Node.js 24 and the CAP CLI (`npm i -g @sap/cds-dk`).
 ```bash
 npm ci
 npm run typer        # generate TypeScript types from the CDS model
-npm run watch        # CAP server on http://localhost:4004
+npm run watch        # CAP server on http://localhost:4004 (backend only)
+npm run watch:ui     # CAP server including the Open Items app
 ```
 
 Open the Open Items app from the index page at `http://localhost:4004` and sign in with a mocked user:
@@ -50,20 +52,23 @@ Open the Open Items app from the index page at `http://localhost:4004` and sign 
 | `dave@nobody.test`  | `test`   | CustomerUser (no business partners) |
 | `admin@portal.test` | `test`   | PortalAdmin                         |
 
+The data source is chosen in `package.json` under `cds.arportal.dataSource`: `mock-s4` (default) or `mock-ecc`. Both return the same open items.
+
 ## Scripts
 
-| Script                    | What it does                                                                 |
-| ------------------------- | ---------------------------------------------------------------------------- |
-| `npm run watch`           | Start CAP for backend work (UI5 plugin disabled, fast restarts)              |
-| `npm run watch:ui`        | Start CAP with the UI5 app served through `cds-plugin-ui5` (needs 4 GB heap) |
-| `npm run watch-openitems` | Same, and open the Open Items app in the browser                             |
-| `npm run typer`           | Generate TypeScript types from the CDS model into `@cds-models/`             |
-| `npm test`                | Run unit and integration tests with the Node.js test runner (`node:test`)    |
-| `npm run typecheck`       | Type-check the backend with `tsc --noEmit`                                   |
-| `npm run lint`            | ESLint with `typescript-eslint` strict type-checked rules                    |
-| `npm run format`          | Format all files with Prettier                                               |
-| `npm run format:check`    | Check formatting without changing files (used in CI)                         |
-| `npm run check`           | Lint, format check, type check and tests in one go; run before every commit  |
+| Script                 | What it does                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| `npm run watch`        | Start CAP for backend work (UI5 plugin disabled, fast restarts)                |
+| `npm run watch:ui`     | Start CAP with the UI5 app served through `cds-plugin-ui5` (needs a 4 GB heap) |
+| `npm run typer`        | Generate TypeScript types from the CDS model into `@cds-models/`               |
+| `npm test`             | Run unit and integration tests with the Node.js test runner (`node:test`)      |
+| `npm run typecheck`    | Type-check the backend with `tsc --noEmit`                                     |
+| `npm run lint`         | ESLint with `typescript-eslint` strict type-checked rules                      |
+| `npm run format`       | Format all files with Prettier                                                 |
+| `npm run format:check` | Check formatting without changing files (used in CI)                           |
+| `npm run check`        | Lint, format check, type check and tests in one go; run before every commit    |
+
+Tests run with `CDS_PLUGIN_UI5_ACTIVE=false`: integration tests only need the OData service, and starting the UI5 tooling in every test server exhausts memory.
 
 CI runs `npm ci`, type generation, lint, format check, type check, tests and a production dependency audit on every push and pull request.
 
@@ -71,6 +76,7 @@ CI runs `npm ci`, type generation, lint, format check, type check, tests and a p
 
 ```text
 app/openitems/                      Fiori Elements list report (UI5, TypeScript)
+_i18n/                              texts for CDS annotations (labels, entity names)
 db/
   types.cds                         enums and the ItemKey aspect
   schema.cds                        portal entities and virtual entities
@@ -82,8 +88,10 @@ srv/
     money.ts                        amounts as integer cents
     clock.ts                        injectable clock for "now" and "today"
     dates.ts                        ISO date helpers, always in UTC
-    datasource/mock-ecc/            ECC formats: ALPHA conversion, DATS dates, debit/credit sign
-    open-items/                     open item mapping, overdue calculation, read handler
+    datasource/                     ArDataSource interface, factory, shared helpers
+      mock-s4/                      mock S/4 data source and mapper
+      mock-ecc/                     mock ECC data source and mapper (ALPHA, DATS, debit/credit)
+    open-items/                     read handler, OData query translator, overdue calculation
     payment/                        payment reference, UUID v4 check, request hash
     jobs/backoff.ts                 retry schedule for posting to SAP
     psp/signature.ts                HMAC signing and verification of webhooks
@@ -100,7 +108,10 @@ test/
 - **"Now" is injected.** All time-dependent logic reads from an injectable clock, or receives the time as a parameter, so tests are deterministic.
 - **SAP identifiers are strings.** Customer, document and material numbers are never converted to numbers, because JavaScript numbers lose precision beyond 15–16 digits.
 - **Open items belong to SAP, not to the portal.** `OpenItems` and `BusinessPartners` are virtual entities (`@cds.persistence.skip`); a read handler fills them from the backend instead of a portal table.
-- **Mock ECC and S/4 tables keep their original shapes.** ECC stores dates as `YYYYMMDD`, unsigned amounts with a debit/credit indicator and zero-padded customer numbers; S/4 uses ISO dates and signed amounts. Mappers translate both into one model.
+- **One data source interface.** Handlers talk to `ArDataSource`; a factory picks mock S/4 or mock ECC from `cds.env.arportal.dataSource`. Mappers translate backend rows into one domain shape, and the handler maps that shape to OData. Both data sources return identical results for the same query (parity tests).
+- **Mock ECC and S/4 tables keep their original shapes.** ECC stores dates as `YYYYMMDD`, unsigned amounts with a debit/credit indicator and zero-padded customer numbers; S/4 uses ISO dates and signed amounts.
+- **Push-down with a documented exception.** Mock S/4 filters, sorts and pages in SQL, with the item key as a tie-breaker so paging is stable. Mock ECC filters overdue items, sorts and pages in memory, because ECC has no net due date column and stores unsigned amounts.
+- **OData query options through an allowlist.** A pure translator turns CAP's CQN into a data source query; anything it does not support returns `400 UNSUPPORTED_QUERY`. A business partner filter can narrow the authorised scope but never widen it. Page size is limited by `@cds.query.limit` (default 30, maximum 200).
 - **Pure functions first.** Business rules live in small pure functions under `srv/lib/` that can be tested without starting CAP; service handlers stay thin.
 - **Failures are explicit.** Invalid input throws; expected business outcomes (such as retries being exhausted or a webhook being rejected) are returned as values.
 
@@ -114,11 +125,11 @@ test/
 - `cds-plugin-ui5` serves the UI5 app through `cds watch`.
 - `@cap-js/cds-test` provides `cds.test()` for integration tests; `axios` (dev only) supplies the response types that `@cap-js/cds-types` uses for it.
 - No secrets are committed; `.env` and `.cdsrc-private.json` are ignored.
-- Tests run with `CDS_PLUGIN_UI5_ACTIVE=false`: integration tests only need the OData service, and starting the UI5 tooling in every `cds.test()` server exhausts memory.
 
 ## Conventions
 
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `refactor`, `test`, `docs`, `style`, `chore`, `ci`.
 - Test names reference the business rule or specification section they cover, for example `BR-12` or `spec 15.2`.
 - CDS elements use PascalCase to match SAP APIs; TypeScript variables use camelCase.
+- Code comments are in English and explain why, not what.
 - One branch per week (`w1/foundation`, `w2/data-model`, …), merged into `main` through a pull request with green CI.
