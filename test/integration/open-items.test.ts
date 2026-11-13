@@ -79,7 +79,14 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
   it('classifies item 4 as a credit memo with a negative amount', async () => {
     const item: OpenItem = byDocument(await readAll(), '1800000004');
     assert.equal(item.ItemType, 'CREDIT_MEMO');
+    assert.equal(item.ItemTypeText, 'Credit Memo');
     assert.equal(Number(item.Amount), -150);
+  });
+
+  it('returns a readable text for every item type', async () => {
+    const items = await readAll();
+    assert.equal(byDocument(items, '1800000001').ItemTypeText, 'Invoice');
+    assert.equal(byDocument(items, '1800000004').ItemTypeText, 'Credit Memo');
   });
 
   it('maps the business partner name', async () => {
@@ -164,6 +171,12 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
       assert.equal(first.Currency, 'EUR');
     });
 
+    it('still filters by the item type code', async () => {
+      const { items } = await readWith("$filter=ItemType eq 'CREDIT_MEMO'");
+      assert.deepEqual(documentsOf(items), ['1800000004', '1800000009']);
+      assert.ok(items.every((i) => i.ItemTypeText === 'Credit Memo'));
+    });
+
     it('rejects $search with 400', async () => {
       await expectUnsupported('$search=INV');
     });
@@ -195,7 +208,6 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
     });
 
     it('returns 404 for an item that does not exist', async () => {
-      // TODO: GET keyUrl('1899999999') → assert.rejects(…, (err: HttpError) => status 404)
       await assert.rejects(GET(keyUrl('1899999999'), alice), (err: HttpError) => {
         assert.equal(err.response?.status, 404);
         return true;

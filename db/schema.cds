@@ -158,6 +158,7 @@ entity OpenItems {
         BusinessPartner        : String(10);
         BusinessPartnerName    : String(81);
         ItemType               : arportal.ItemType;
+        ItemTypeText           : String(30);
         BillingDocument        : String(10);
         Reference              : String(16);
         InvoiceReference       : String(10);

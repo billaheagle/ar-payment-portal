@@ -1,7 +1,7 @@
 import cds from '@sap/cds';
-import { UserAssignments } from '#cds-models/arportal';
+import { ItemType, UserAssignments } from '#cds-models/arportal';
 import type { OpenItem as OpenItemRow } from '#cds-models/CustomerService';
-import type { ItemKey, OpenItem, OpenItemQuery } from '../datasource/types';
+import { type ItemKey, type OpenItem, type OpenItemQuery } from '../datasource/types';
 import { dataSource } from '../datasource/factory';
 import { fromCents } from '../money';
 import { today } from '../clock';
@@ -82,6 +82,12 @@ export const readOpenItems = async (req: cds.Request) => {
   return Object.assign(rows, { $count: total });
 };
 
+export const ITEM_TYPE_TEXT: Record<ItemType, string> = {
+  INVOICE: 'Invoice',
+  CREDIT_MEMO: 'Credit Memo',
+  RESIDUAL: 'Residual Item',
+};
+
 export const toOpenItemRow = (item: OpenItem, todayIso: string): OpenItemRow => {
   const overdue = daysOverdue(item.netDueDate, todayIso);
 
@@ -98,6 +104,7 @@ export const toOpenItemRow = (item: OpenItem, todayIso: string): OpenItemRow => 
 
     // Document
     ItemType: item.itemType,
+    ItemTypeText: ITEM_TYPE_TEXT[item.itemType],
     BillingDocument: item.billingDocument,
     Reference: item.reference,
     InvoiceReference: item.invoiceReference,

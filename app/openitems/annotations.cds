@@ -64,14 +64,17 @@ annotate service.OpenItems with {
     LineItem            @title: '{i18n>LineItem}';
     BusinessPartner     @title: '{i18n>BusinessPartner}';
     BusinessPartnerName @title: '{i18n>Customer}';
-    ItemType            @title: '{i18n>ItemType}';
+    ItemType            @title             : '{i18n>ItemType}'
+                        @Common.Text       : ItemTypeText
+                        @UI.TextArrangement: #TextOnly;
+    ItemTypeText        @title: '{i18n>ItemType}';
     BillingDocument     @title: '{i18n>BillingDocument}';
     Reference           @title: '{i18n>Reference}';
     InvoiceReference    @title: '{i18n>InvoiceReference}';
     PostingDate         @title: '{i18n>PostingDate}';
     DocumentDate        @title: '{i18n>DocumentDate}';
     NetDueDate          @title: '{i18n>NetDueDate}';
-    Amount              @title: '{i18n>Amount}'  @Measures.ISOCurrency: Currency;
+    Amount              @title             : '{i18n>Amount}'  @Measures.ISOCurrency: Currency;
     Currency            @title: '{i18n>Currency}';
     IsOverdue           @title: '{i18n>Overdue}';
     DaysOverdue         @title: '{i18n>DaysOverdue}';
