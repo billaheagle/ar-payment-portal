@@ -176,4 +176,39 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
       await expectUnsupported("$filter=CompanyCode ne '1010'");
     });
   });
+
+  describe('single open item by key (spec 7.2)', () => {
+    // OData key URL for one open item
+    const keyUrl = (accountingDocument: string, companyCode = '1010'): string =>
+      `/odata/v4/customer/OpenItems(CompanyCode='${companyCode}',FiscalYear='2026',` +
+      `AccountingDocument='${accountingDocument}',LineItem='001')`;
+
+    it('returns one open item, not a list', async () => {
+      const res = await GET(keyUrl('1800000001'), alice);
+      const item = res.data as OpenItem;
+
+      assert.equal(res.status, 200);
+      assert.equal(item.AccountingDocument, '1800000001');
+      assert.equal(item.LineItem, '001');
+      assert.equal(item.DaysOverdue, 31);
+      assert.equal('value' in (res.data as object), false);
+    });
+
+    it('returns 404 for an item that does not exist', async () => {
+      // TODO: GET keyUrl('1899999999') → assert.rejects(…, (err: HttpError) => status 404)
+      await assert.rejects(GET(keyUrl('1899999999'), alice), (err: HttpError) => {
+        assert.equal(err.response?.status, 404);
+        return true;
+      });
+    });
+
+    it('finds an item in another company code', async () => {
+      const res = await GET(keyUrl('1800000008', '1710'), alice);
+      const item = res.data as OpenItem;
+
+      assert.equal(res.status, 200);
+      assert.equal(item.AccountingDocument, '1800000008');
+      assert.equal(item.BusinessPartner, '1000003');
+    });
+  });
 });
