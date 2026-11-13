@@ -1,5 +1,5 @@
 import cds from '@sap/cds';
-import { ItemType, UserAssignments } from '#cds-models/arportal';
+import { ItemType } from '#cds-models/arportal';
 import type { OpenItem as OpenItemRow } from '#cds-models/CustomerService';
 import { type ItemKey, type OpenItem, type OpenItemQuery } from '../datasource/types';
 import { dataSource } from '../datasource/factory';
@@ -9,17 +9,7 @@ import { daysOverdue } from './overdue';
 import { toCdsDate } from '../dates';
 import type { CqnSelect, RequestedQuery } from './to-open-item-query';
 import { toRequestedQuery, UnsupportedQueryError } from './to-open-item-query';
-
-const { SELECT } = cds.ql;
-
-const activeBusinessPartners = async (): Promise<string[]> => {
-  const rows = await SELECT.distinct
-    .from(UserAssignments)
-    .columns('BusinessPartner')
-    .where({ IsActive: true });
-
-  return rows.map((r) => String(r.BusinessPartner));
-};
+import { loadScope, visiblePartners } from '../authz/scope';
 
 const readOneOpenItem = async (req: cds.Request, allowed: string[], todayIso: string) => {
   const [raw] = req.params as unknown[];
@@ -50,7 +40,7 @@ const readOneOpenItem = async (req: cds.Request, allowed: string[], todayIso: st
 
 export const readOpenItems = async (req: cds.Request) => {
   const todayIso = today();
-  const allowed = await activeBusinessPartners();
+  const allowed = visiblePartners(await loadScope(req.user.id));
 
   if (req.params.length > 0) {
     return readOneOpenItem(req, allowed, todayIso);

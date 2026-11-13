@@ -4,8 +4,11 @@ import assert from 'node:assert/strict';
 import type { OpenItem } from '#cds-models/CustomerService';
 import { setClock, resetClock } from '../../srv/lib/clock';
 
+type UserAuth = { auth: { username: string; password: string } };
+
 const { GET } = cds.test(__dirname + '/../..');
-const alice = { auth: { username: 'alice@acme.test', password: 'test' } };
+const asUser = (username: string): UserAuth => ({ auth: { username, password: 'test' } });
+const alice = asUser('alice@acme.test');
 
 type ODataList = { value: OpenItem[]; '@odata.count'?: number };
 
@@ -19,8 +22,11 @@ type HttpError = {
 };
 
 // Reads OpenItems with the given OData query options
-const readWith = async (options: string): Promise<{ items: OpenItem[]; count?: number }> => {
-  const res = await GET(`/odata/v4/customer/OpenItems?${options}`, alice);
+const readWith = async (
+  options: string,
+  user: UserAuth = alice,
+): Promise<{ items: OpenItem[]; count?: number }> => {
+  const res = await GET(`/odata/v4/customer/OpenItems?${options}`, user);
   const body = res.data as ODataList;
   return { items: body.value, count: body['@odata.count'] };
 };
@@ -52,14 +58,14 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
     resetClock();
   });
 
-  it('returns all 9 seeded open items', async () => {
+  it("returns the open items of the user's business partners", async () => {
     const items = await readAll();
-    assert.equal(items.length, 9);
+    assert.equal(items.length, 7);
   });
 
   it('returns the total in @odata.count when $count=true', async () => {
     const res = await GET('/odata/v4/customer/OpenItems?$count=true', alice);
-    assert.equal((res.data as ODataList)['@odata.count'], 9);
+    assert.equal((res.data as ODataList)['@odata.count'], 7);
   });
 
   it('marks item 1 as 31 days overdue', async () => {
@@ -92,7 +98,7 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
   it('maps the business partner name', async () => {
     const items: OpenItem[] = await readAll();
     assert.equal(byDocument(items, '1800000001').BusinessPartnerName, 'ACME GmbH');
-    assert.equal(byDocument(items, '1800000008').BusinessPartnerName, 'Globex Inc.');
+    assert.equal(byDocument(items, '1800000007').BusinessPartnerName, 'ACME Logistics GmbH');
   });
 
   it('maps AccountingDocumentItem to LineItem', async () => {
@@ -102,27 +108,22 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
   describe('OData query options (spec 9.3)', () => {
     it('filters by company code', async () => {
       const { items } = await readWith("$filter=CompanyCode eq '1710'");
-      assert.deepEqual(documentsOf(items), ['1800000006', '1800000008', '1800000009']);
+      assert.deepEqual(documentsOf(items), ['1800000006']);
     });
 
     it('filters overdue items', async () => {
       const { items } = await readWith('$filter=IsOverdue eq true');
-      assert.deepEqual(documentsOf(items), [
-        '1800000001',
-        '1800000004',
-        '1800000008',
-        '1800000009',
-      ]);
+      assert.deepEqual(documentsOf(items), ['1800000001', '1800000004']);
     });
 
     it('filters credit memos', async () => {
       const { items } = await readWith("$filter=ItemType eq 'CREDIT_MEMO'");
-      assert.deepEqual(documentsOf(items), ['1800000004', '1800000009']);
+      assert.deepEqual(documentsOf(items), ['1800000004']);
     });
 
-    it('filters by one business partner', async () => {
+    it('does not widen the scope with a business partner filter', async () => {
       const { items } = await readWith("$filter=BusinessPartner eq '1000003'");
-      assert.deepEqual(documentsOf(items), ['1800000008', '1800000009']);
+      assert.deepEqual(documentsOf(items), []);
     });
 
     it('filters by several business partners joined with or', async () => {
@@ -157,7 +158,7 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
     it('pages the result and returns the full count', async () => {
       const { items, count } = await readWith('$top=3&$skip=3&$count=true');
       assert.equal(items.length, 3);
-      assert.equal(count, 9);
+      assert.equal(count, 7);
     });
 
     it('sorts by amount descending', async () => {
@@ -173,7 +174,7 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
 
     it('still filters by the item type code', async () => {
       const { items } = await readWith("$filter=ItemType eq 'CREDIT_MEMO'");
-      assert.deepEqual(documentsOf(items), ['1800000004', '1800000009']);
+      assert.deepEqual(documentsOf(items), ['1800000004']);
       assert.ok(items.every((i) => i.ItemTypeText === 'Credit Memo'));
     });
 
@@ -215,12 +216,46 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
     });
 
     it('finds an item in another company code', async () => {
-      const res = await GET(keyUrl('1800000008', '1710'), alice);
+      const res = await GET(keyUrl('1800000006', '1710'), alice);
       const item = res.data as OpenItem;
 
       assert.equal(res.status, 200);
-      assert.equal(item.AccountingDocument, '1800000008');
-      assert.equal(item.BusinessPartner, '1000003');
+      assert.equal(item.AccountingDocument, '1800000006');
+      assert.equal(item.BusinessPartner, '1000001');
     });
+
+    it('returns 404 for an item of another customer', async () => {
+      await assert.rejects(GET(keyUrl('1800000008', '1710'), alice), (err: HttpError) => {
+        assert.equal(err.response?.status, 404);
+        return true;
+      });
+    });
+  });
+});
+
+describe('scope per user (spec 3, BR-11)', () => {
+  it('shows carol only the items of ACME GmbH', async () => {
+    const { items } = await readWith('', asUser('carol@acme.test'));
+    assert.deepEqual(documentsOf(items), [
+      '1800000001',
+      '1800000002',
+      '1800000003',
+      '1800000004',
+      '1800000005',
+      '1800000006',
+    ]);
+  });
+
+  it('shows bob only the items of Globex', async () => {
+    const { items } = await readWith('', asUser('bob@globex.test'));
+    assert.deepEqual(documentsOf(items), ['1800000008', '1800000009']);
+    assert.equal(byDocument(items, '1800000008').BusinessPartnerName, 'Globex Inc.');
+    assert.equal(byDocument(items, '1800000009').BusinessPartnerName, 'Globex Inc.');
+  });
+
+  it('shows dave nothing because he has no assignment', async () => {
+    const { items, count } = await readWith('$count=true', asUser('dave@nobody.test'));
+    assert.deepEqual(documentsOf(items), []);
+    assert.equal(count, 0);
   });
 });
