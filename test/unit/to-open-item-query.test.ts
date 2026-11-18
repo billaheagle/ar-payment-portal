@@ -1,10 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  toRequestedQuery,
-  UnsupportedQueryError,
-  type CqnSelect,
-} from '../../srv/lib/open-items/to-open-item-query';
+import { toRequestedQuery } from '../../srv/lib/open-items/to-open-item-query';
+import { UnsupportedQueryError, type CqnSelect } from '../../srv/lib/odata/query';
 
 // CAP appends the entity key as implicit sort entries; copied from the logged CQN
 const IMPLICIT_ORDER: NonNullable<CqnSelect['orderBy']> = [
@@ -187,74 +184,76 @@ describe('toRequestedQuery (spec 9.3)', () => {
     });
 
     it('rejects an unknown item type', () => {
-      assert.throws(() =>
-        toRequestedQuery({
-          where: [{ ref: ['ItemType'] }, '=', { val: 'BANANA' }],
-        }),
+      assert.throws(
+        () => toRequestedQuery({ where: [{ ref: ['ItemType'] }, '=', { val: 'BANANA' }] }),
+        /Unsupported ItemType value/,
       );
     });
 
     it('rejects a field that cannot be filtered', () => {
-      assert.throws(() =>
-        toRequestedQuery({
-          where: [{ ref: ['Reference'] }, '=', { val: '' }],
-        }),
+      assert.throws(
+        () => toRequestedQuery({ where: [{ ref: ['Reference'] }, '=', { val: '' }] }),
+        /Filtering by 'Reference' is not supported/,
       );
     });
 
     it('rejects an operator other than =', () => {
-      assert.throws(() =>
-        toRequestedQuery({
-          where: [{ ref: ['CompanyCode'] }, '!=', { val: '1710' }],
-        }),
+      assert.throws(
+        () => toRequestedQuery({ where: [{ ref: ['CompanyCode'] }, '!=', { val: '1710' }] }),
+        /Unsupported condition/,
       );
     });
 
     it('rejects a function such as startswith', () => {
-      assert.throws(() =>
-        toRequestedQuery({
-          where: [{ func: 'startswith', args: [{ ref: ['CompanyCode'] }, { val: '123' }] }],
-        }),
+      assert.throws(
+        () =>
+          toRequestedQuery({
+            where: [{ func: 'startswith', args: [{ ref: ['CompanyCode'] }, { val: '123' }] }],
+          }),
+        /Unsupported condition/,
       );
     });
 
     it('rejects an or-group that mixes fields', () => {
-      assert.throws(() =>
-        toRequestedQuery({
-          where: [
-            { ref: ['BusinessPartner'] },
-            '=',
-            { val: '1000001' },
-            'or',
-            { ref: ['CompanyCode'] },
-            '=',
-            { val: '1000002' },
-          ],
-        }),
+      assert.throws(
+        () =>
+          toRequestedQuery({
+            where: [
+              { ref: ['BusinessPartner'] },
+              '=',
+              { val: '1000001' },
+              'or',
+              { ref: ['CompanyCode'] },
+              '=',
+              { val: '1000002' },
+            ],
+          }),
+        /only supported for BusinessPartner/,
       );
     });
 
     it('rejects IsOverdue given as text', () => {
-      assert.throws(() =>
-        toRequestedQuery({
-          where: [{ ref: ['IsOverdue'] }, '=', { val: 'true' }],
-        }),
+      assert.throws(
+        () => toRequestedQuery({ where: [{ ref: ['IsOverdue'] }, '=', { val: 'true' }] }),
+        /IsOverdue/,
       );
     });
 
     it('rejects the same field twice', () => {
-      assert.throws(() =>
-        toRequestedQuery({
-          where: [
-            { ref: ['CompanyCode'] },
-            '=',
-            { val: '1010' },
-            'and',
-            { ref: ['CompanyCode'] },
-            '=',
-            { val: '1710' },
-          ],
-        }),
+      assert.throws(
+        () =>
+          toRequestedQuery({
+            where: [
+              { ref: ['CompanyCode'] },
+              '=',
+              { val: '1010' },
+              'and',
+              { ref: ['CompanyCode'] },
+              '=',
+              { val: '1710' },
+            ],
+          }),
+        /filtered more than once/,
       );
     });
   });

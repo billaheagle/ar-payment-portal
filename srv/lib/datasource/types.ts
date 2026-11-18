@@ -12,6 +12,9 @@ export type OrderByField = (typeof ORDER_BY_FIELDS)[number];
 export const ORDER_BY_DIRECTION = ['asc', 'desc'] as const;
 export type OrderByDirection = (typeof ORDER_BY_DIRECTION)[number];
 
+export const NOT_PAYABLE_REASON = ['IN_DISPUTE', 'PAYMENT_PENDING', 'NO_PAY_PERMISSION'] as const;
+export type NotPayableReason = (typeof NOT_PAYABLE_REASON)[number];
+
 export interface ItemKey {
   companyCode: string;
   fiscalYear: string;

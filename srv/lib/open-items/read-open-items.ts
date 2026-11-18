@@ -1,27 +1,20 @@
 import cds from '@sap/cds';
-import { ItemType, UserAssignments } from '#cds-models/arportal';
 import type { OpenItem as OpenItemRow } from '#cds-models/CustomerService';
-import { type ItemKey, type OpenItem, type OpenItemQuery } from '../datasource/types';
+import type { ItemType, ItemKey, OpenItem, OpenItemQuery } from '../datasource/types';
 import { dataSource } from '../datasource/factory';
 import { fromCents } from '../money';
 import { today } from '../clock';
 import { daysOverdue } from './overdue';
 import { toCdsDate } from '../dates';
-import type { CqnSelect, RequestedQuery } from './to-open-item-query';
-import { toRequestedQuery, UnsupportedQueryError } from './to-open-item-query';
+import type { RequestedQuery } from './to-open-item-query';
+import { toRequestedQuery } from './to-open-item-query';
+import { loadScope, permissionsFor, type UserScope, visiblePartners } from '../authz/scope';
+import { UnsupportedQueryError, type CqnSelect } from '../odata/query';
+import { payabilityOf, type Payability } from './payability';
+import { blockedKeys } from './blocked-keys';
 
-const { SELECT } = cds.ql;
-
-const activeBusinessPartners = async (): Promise<string[]> => {
-  const rows = await SELECT.distinct
-    .from(UserAssignments)
-    .columns('BusinessPartner')
-    .where({ IsActive: true });
-
-  return rows.map((r) => String(r.BusinessPartner));
-};
-
-const readOneOpenItem = async (req: cds.Request, allowed: string[], todayIso: string) => {
+const readOneOpenItem = async (req: cds.Request, scope: UserScope, todayIso: string) => {
+  const allowed = visiblePartners(scope);
   const [raw] = req.params as unknown[];
 
   const keys = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
@@ -44,16 +37,22 @@ const readOneOpenItem = async (req: cds.Request, allowed: string[], todayIso: st
 
   const [item] = await dataSource().getOpenItemsByKeys([key], allowed);
   if (item === undefined) return req.reject(404, 'Open item not found');
+  const { disputed, reserved } = await blockedKeys([item]);
 
-  return toOpenItemRow(item, todayIso);
+  return toOpenItemRow(
+    item,
+    todayIso,
+    payabilityOf(item, permissionsFor(scope, item.businessPartner), disputed, reserved),
+  );
 };
 
 export const readOpenItems = async (req: cds.Request) => {
   const todayIso = today();
-  const allowed = await activeBusinessPartners();
+  const scope = await loadScope(req.user.id);
+  const allowed = visiblePartners(scope);
 
   if (req.params.length > 0) {
-    return readOneOpenItem(req, allowed, todayIso);
+    return readOneOpenItem(req, scope, todayIso);
   }
 
   let requested: RequestedQuery;
@@ -77,7 +76,15 @@ export const readOpenItems = async (req: cds.Request) => {
   };
 
   const { openItems, total } = await dataSource().getOpenItems(query);
-  const rows = openItems.map((item) => toOpenItemRow(item, todayIso));
+  const { disputed, reserved } = await blockedKeys(openItems);
+
+  const rows = openItems.map((item) =>
+    toOpenItemRow(
+      item,
+      todayIso,
+      payabilityOf(item, permissionsFor(scope, item.businessPartner), disputed, reserved),
+    ),
+  );
 
   return Object.assign(rows, { $count: total });
 };
@@ -88,7 +95,11 @@ export const ITEM_TYPE_TEXT: Record<ItemType, string> = {
   RESIDUAL: 'Residual Item',
 };
 
-export const toOpenItemRow = (item: OpenItem, todayIso: string): OpenItemRow => {
+export const toOpenItemRow = (
+  item: OpenItem,
+  todayIso: string,
+  payability: Payability,
+): OpenItemRow => {
   const overdue = daysOverdue(item.netDueDate, todayIso);
 
   return {
@@ -123,8 +134,8 @@ export const toOpenItemRow = (item: OpenItem, todayIso: string): OpenItemRow => 
     IsOverdue: overdue > 0,
     DaysOverdueCriticality: overdue > 0 ? 1 : 0,
 
-    // Later
-    IsPayable: null,
-    NotPayableReason: null,
+    // Payment
+    IsPayable: payability.isPayable,
+    NotPayableReason: payability.reason,
   };
 };

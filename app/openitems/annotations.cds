@@ -62,7 +62,25 @@ annotate service.OpenItems with {
     FiscalYear          @title: '{i18n>FiscalYear}';
     AccountingDocument  @title: '{i18n>Document}';
     LineItem            @title: '{i18n>LineItem}';
-    BusinessPartner     @title: '{i18n>BusinessPartner}';
+    BusinessPartner     @title             : '{i18n>BusinessPartner}'
+                        @Common.ValueList  : {
+        CollectionPath: 'BusinessPartners',
+        Parameters    : [
+            {
+                $Type            : 'Common.ValueListParameterInOut',
+                LocalDataProperty: BusinessPartner,
+                ValueListProperty: 'BusinessPartner'
+            },
+            {
+                $Type            : 'Common.ValueListParameterDisplayOnly',
+                ValueListProperty: 'Name'
+            },
+            {
+                $Type            : 'Common.ValueListParameterDisplayOnly',
+                ValueListProperty: 'Country'
+            }
+        ]
+    };
     BusinessPartnerName @title: '{i18n>Customer}';
     ItemType            @title             : '{i18n>ItemType}'
                         @Common.Text       : ItemTypeText
@@ -80,4 +98,12 @@ annotate service.OpenItems with {
     DaysOverdue         @title: '{i18n>DaysOverdue}';
     IsPayable           @title: '{i18n>IsPayable}';
     NotPayableReason    @title: '{i18n>NotPayableReason}';
+};
+
+annotate service.BusinessPartners with @(Capabilities.SearchRestrictions.Searchable: false) {
+    BusinessPartner @title: '{i18n>BusinessPartner}';
+    Name            @title: '{i18n>Customer}';
+    Country         @title: '{i18n>Country}';
+    CanPay          @title: '{i18n>CanPay}';
+    CanDispute      @title: '{i18n>CanDispute}';
 };
