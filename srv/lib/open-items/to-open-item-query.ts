@@ -6,22 +6,7 @@ import type {
   OrderByDirection,
   OrderByField,
 } from '../datasource/types';
-
-export interface CqnSelect {
-  where?: unknown[];
-  orderBy?: {
-    ref?: unknown[];
-    sort?: unknown;
-    implicit?: unknown;
-  }[];
-
-  limit?: {
-    rows?: { val?: unknown };
-    offset?: { val?: unknown };
-  };
-
-  search?: unknown;
-}
+import { readLimit, rejectSearch, UnsupportedQueryError, type CqnSelect } from '../odata/query';
 
 export interface RequestedQuery extends Omit<OpenItemQuery, 'businessPartners' | 'today'> {
   businessPartners?: string[];
@@ -32,18 +17,7 @@ export type Filters = Pick<
   'businessPartners' | 'companyCode' | 'itemType' | 'currency' | 'overdue'
 >;
 
-export class UnsupportedQueryError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'UnsupportedQueryError';
-  }
-}
-
-const DEFAULT_TOP = 30; // same as @cds.query.limit default in customer-service.cds
 const DEFAULT_ORDER: OrderBy[] = [{ field: 'NetDueDate', direction: 'asc' }];
-
-const isNonNegativeInteger = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
 const isOrderByField = (value: unknown): value is OrderByField =>
   typeof value === 'string' && (ORDER_BY_FIELDS as readonly string[]).includes(value);
@@ -93,24 +67,6 @@ const readComparison = (group: unknown[]): { field: string; value: unknown } => 
   }
 
   return { field, value: val.value };
-};
-
-const rejectSearch = (search: CqnSelect['search']): void => {
-  if (search !== undefined) throw new UnsupportedQueryError(`$search is not supported`);
-};
-
-const readLimit = (limit: CqnSelect['limit']): { top: number; skip: number } => {
-  const rows = limit?.rows?.val ?? DEFAULT_TOP;
-  const offset = limit?.offset?.val ?? 0;
-
-  if (!isNonNegativeInteger(rows)) {
-    throw new UnsupportedQueryError(`Invalid $top: ${JSON.stringify(rows)}`);
-  }
-  if (!isNonNegativeInteger(offset)) {
-    throw new UnsupportedQueryError(`Invalid $skip: ${JSON.stringify(offset)}`);
-  }
-
-  return { top: rows, skip: offset };
 };
 
 const readOrderBy = (orderBy: CqnSelect['orderBy']): OrderBy[] => {

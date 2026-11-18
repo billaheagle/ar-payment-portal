@@ -1,15 +1,15 @@
 import cds from '@sap/cds';
-import { ItemType } from '#cds-models/arportal';
 import type { OpenItem as OpenItemRow } from '#cds-models/CustomerService';
-import { type ItemKey, type OpenItem, type OpenItemQuery } from '../datasource/types';
+import type { ItemType, ItemKey, OpenItem, OpenItemQuery } from '../datasource/types';
 import { dataSource } from '../datasource/factory';
 import { fromCents } from '../money';
 import { today } from '../clock';
 import { daysOverdue } from './overdue';
 import { toCdsDate } from '../dates';
-import type { CqnSelect, RequestedQuery } from './to-open-item-query';
-import { toRequestedQuery, UnsupportedQueryError } from './to-open-item-query';
+import type { RequestedQuery } from './to-open-item-query';
+import { toRequestedQuery } from './to-open-item-query';
 import { loadScope, visiblePartners } from '../authz/scope';
+import { UnsupportedQueryError, type CqnSelect } from '../odata/query';
 
 const readOneOpenItem = async (req: cds.Request, allowed: string[], todayIso: string) => {
   const [raw] = req.params as unknown[];
