@@ -24,8 +24,9 @@ Built with **SAP CAP (Node.js, strict TypeScript)** and **SAPUI5** (Fiori Elemen
 | Open Items list report (Fiori Elements, TypeScript)                                                                       | ✅ Done                               |
 | DataSource abstraction (mock ECC, mock S/4) with identical results                                                        | ✅ Done, unit- and integration-tested |
 | OData query translation (filters, sorting, paging, single item by key)                                                    | ✅ Done, unit- and integration-tested |
-| Per-business-partner authorisation                                                                                        | ⏳ Next                               |
-| Payments and mock payment provider                                                                                        | Planned                               |
+| Per-business-partner authorisation (open items, business partners, portal tables)                                         | ✅ Done, unit- and integration-tested |
+| Payability per item (`IsPayable`, `NotPayableReason`) and business partner value help                                     | ✅ Done                               |
+| Payments and mock payment provider                                                                                        | ⏳ Next                               |
 | Webhooks, outbox, reliability                                                                                             | Planned                               |
 | PostgreSQL, reconcile job, multi-instance                                                                                 | Planned                               |
 | Disputes                                                                                                                  | Planned                               |
@@ -88,10 +89,13 @@ srv/
     money.ts                        amounts as integer cents
     clock.ts                        injectable clock for "now" and "today"
     dates.ts                        ISO date helpers, always in UTC
+    authz/                          user scope from UserAssignments, scope restriction for portal tables
+    business-partners/              business partner read handler (value help)
+    odata/                          shared OData query helpers ($top/$skip, unsupported query error)
     datasource/                     ArDataSource interface, factory, shared helpers
       mock-s4/                      mock S/4 data source and mapper
       mock-ecc/                     mock ECC data source and mapper (ALPHA, DATS, debit/credit)
-    open-items/                     read handler, OData query translator, overdue calculation
+    open-items/                     read handler, OData query translator, overdue and payability rules
     payment/                        payment reference, UUID v4 check, request hash
     jobs/backoff.ts                 retry schedule for posting to SAP
     psp/signature.ts                HMAC signing and verification of webhooks
@@ -112,6 +116,10 @@ test/
 - **Mock ECC and S/4 tables keep their original shapes.** ECC stores dates as `YYYYMMDD`, unsigned amounts with a debit/credit indicator and zero-padded customer numbers; S/4 uses ISO dates and signed amounts.
 - **Push-down with a documented exception.** Mock S/4 filters, sorts and pages in SQL, with the item key as a tie-breaker so paging is stable. Mock ECC filters overdue items, sorts and pages in memory, because ECC has no net due date column and stores unsigned amounts.
 - **OData query options through an allowlist.** A pure translator turns CAP's CQN into a data source query; anything it does not support returns `400 UNSUPPORTED_QUERY`. A business partner filter can narrow the authorised scope but never widen it. Page size is limited by `@cds.query.limit` (default 30, maximum 200).
+- **Authorisation per business partner.** A user's scope comes from active `UserAssignments` with `CanView`; pay and dispute permissions only count for business partners the user may view. Open items and business partners are read only for that scope, and a business partner filter can narrow it but never widen it.
+- **Portal tables are restricted, not rewritten.** `Payments`, `PaymentItems` and `Disputes` keep CAP's generic handlers; a `before('READ')` handler adds the scope condition with AND (through `Payment.BusinessPartner` for payment items), so filters and keys from the request still apply.
+- **Out of scope looks like not found.** Reading an item, business partner, payment or dispute of another customer returns 404 with the same message as a missing one, so other customers' data cannot be probed.
+- **Payability is a pure rule.** An item is not payable without pay permission, with an open dispute, or while a pending payment reserves it, in that priority; only the first reason is reported.
 - **Pure functions first.** Business rules live in small pure functions under `srv/lib/` that can be tested without starting CAP; service handlers stay thin.
 - **Failures are explicit.** Invalid input throws; expected business outcomes (such as retries being exhausted or a webhook being rejected) are returned as values.
 
