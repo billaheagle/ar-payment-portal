@@ -3,10 +3,13 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import type { OpenItem } from '#cds-models/CustomerService';
 import { setClock, resetClock } from '../../srv/lib/clock';
+import { randomUUID } from 'node:crypto';
+import { ItemReservations } from '#cds-models/arportal';
 
 type UserAuth = { auth: { username: string; password: string } };
 
 const { GET } = cds.test(__dirname + '/../..');
+const { INSERT, DELETE } = cds.ql;
 const asUser = (username: string): UserAuth => ({ auth: { username, password: 'test' } });
 const alice = asUser('alice@acme.test');
 
@@ -42,6 +45,11 @@ const expectUnsupported = async (options: string): Promise<void> => {
     return true;
   });
 };
+
+// OData key URL for one open item
+const keyUrl = (accountingDocument: string, companyCode = '1010'): string =>
+  `/odata/v4/customer/OpenItems(CompanyCode='${companyCode}',FiscalYear='2026',` +
+  `AccountingDocument='${accountingDocument}',LineItem='001')`;
 
 const byDocument = (items: OpenItem[], doc: string): OpenItem => {
   const found = items.find((i) => i.AccountingDocument === doc);
@@ -192,11 +200,6 @@ describe('OpenItems READ (spec 7.2, 15.2)', () => {
   });
 
   describe('single open item by key (spec 7.2)', () => {
-    // OData key URL for one open item
-    const keyUrl = (accountingDocument: string, companyCode = '1010'): string =>
-      `/odata/v4/customer/OpenItems(CompanyCode='${companyCode}',FiscalYear='2026',` +
-      `AccountingDocument='${accountingDocument}',LineItem='001')`;
-
     it('returns one open item, not a list', async () => {
       const res = await GET(keyUrl('1800000001'), alice);
       const item = res.data as OpenItem;
@@ -257,5 +260,70 @@ describe('scope per user (spec 3, BR-11)', () => {
     const { items, count } = await readWith('$count=true', asUser('dave@nobody.test'));
     assert.deepEqual(documentsOf(items), []);
     assert.equal(count, 0);
+  });
+});
+
+describe('payability (spec 5.10)', () => {
+  it('allows alice to pay an item without a blocking reason', async () => {
+    const item = byDocument(await readAll(), '1800000001');
+    assert.equal(item.IsPayable, true);
+    assert.equal(item.NotPayableReason, null);
+  });
+
+  it('blocks an item with an open dispute', async () => {
+    const item = byDocument(await readAll(), '1800000005');
+    assert.equal(item.IsPayable, false);
+    assert.equal(item.NotPayableReason, 'IN_DISPUTE');
+  });
+
+  it('blocks an item of a business partner alice may only view', async () => {
+    const item = byDocument(await readAll(), '1800000007');
+    assert.equal(item.IsPayable, false);
+    assert.equal(item.NotPayableReason, 'NO_PAY_PERMISSION');
+  });
+
+  it('blocks every item for carol, who may only view', async () => {
+    const { items } = await readWith('', asUser('carol@acme.test'));
+    const item = byDocument(items, '1800000001');
+    assert.equal(item.IsPayable, false);
+    assert.equal(item.NotPayableReason, 'NO_PAY_PERMISSION');
+    assert.ok(items.every((i) => i.IsPayable === false));
+  });
+
+  it('applies the same rules to a single item read by key', async () => {
+    const res = await GET(keyUrl('1800000005'), alice);
+    const item = res.data as OpenItem;
+
+    assert.equal(res.status, 200);
+    assert.equal(item.IsPayable, false);
+    assert.equal(item.NotPayableReason, 'IN_DISPUTE');
+  });
+
+  describe('with a pending payment', () => {
+    const reservation = {
+      CompanyCode: '1010',
+      FiscalYear: '2026',
+      AccountingDocument: '1800000002',
+      LineItem: '001',
+      Payment_ID: randomUUID(),
+      ReservedAt: '2026-11-01T00:00:00Z',
+    };
+
+    before(async () => {
+      await INSERT.into(ItemReservations).entries(reservation);
+    });
+
+    after(async () => {
+      await DELETE.from(ItemReservations).where({
+        AccountingDocument: reservation.AccountingDocument,
+      });
+    });
+
+    it('blocks an item reserved by a pending payment', async () => {
+      const { items } = await readWith('', alice);
+      const item = byDocument(items, '1800000002');
+      assert.equal(item.IsPayable, false);
+      assert.equal(item.NotPayableReason, 'PAYMENT_PENDING');
+    });
   });
 });
