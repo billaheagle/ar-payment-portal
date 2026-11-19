@@ -63,7 +63,7 @@ const readComparison = (group: unknown[]): { field: string; value: unknown } => 
   const val = valOf(valToken);
 
   if (group.length !== 3 || field === undefined || operator !== '=' || val === undefined) {
-    throw new UnsupportedQueryError(`Unsupported condition: ${JSON.stringify(group)}`);
+    throw new UnsupportedQueryError(`Unsupported condition: ${JSON.stringify(group)}`, '$filter');
   }
 
   return { field, value: val.value };
@@ -77,12 +77,18 @@ const readOrderBy = (orderBy: CqnSelect['orderBy']): OrderBy[] => {
     const field = o.ref?.length === 1 ? o.ref[0] : undefined;
 
     if (!isOrderByField(field)) {
-      throw new UnsupportedQueryError(`Sorting by ${JSON.stringify(o.ref)} is not supported`);
+      throw new UnsupportedQueryError(
+        `Sorting by ${JSON.stringify(o.ref)} is not supported`,
+        '$orderby',
+      );
     }
 
     const direction = o.sort ?? 'asc';
     if (!isOrderByDirection(direction)) {
-      throw new UnsupportedQueryError(`Unsupported sort direction: ${JSON.stringify(o.sort)}`);
+      throw new UnsupportedQueryError(
+        `Unsupported sort direction: ${JSON.stringify(o.sort)}`,
+        '$orderby',
+      );
     }
 
     return { field, direction };
@@ -97,13 +103,14 @@ const readWhere = (where: CqnSelect['where']): Filters => {
   if (hasOr && where.includes('and'))
     throw new UnsupportedQueryError(
       "Combine 'and' with 'or' only by putting the 'or' part in parentheses",
+      '$filter',
     );
 
   const tokens = hasOr ? [{ xpr: where }] : where;
 
   const setOnce = <K extends keyof Filters>(key: K, value: NonNullable<Filters[K]>): void => {
     if (filter[key] !== undefined)
-      throw new UnsupportedQueryError(`'${key}' is filtered more than once`);
+      throw new UnsupportedQueryError(`'${key}' is filtered more than once`, '$filter');
 
     filter[key] = value;
   };
@@ -119,9 +126,13 @@ const readWhere = (where: CqnSelect['where']): Filters => {
         if (field !== 'BusinessPartner')
           throw new UnsupportedQueryError(
             `'or' is only supported for BusinessPartner, not '${field}'`,
+            '$filter',
           );
         if (typeof value !== 'string')
-          throw new UnsupportedQueryError(`Invalid BusinessPartner: ${JSON.stringify(value)}`);
+          throw new UnsupportedQueryError(
+            `Invalid BusinessPartner: ${JSON.stringify(value)}`,
+            '$filter',
+          );
         partners.push(value);
       }
       setOnce('businessPartners', partners);
@@ -135,6 +146,7 @@ const readWhere = (where: CqnSelect['where']): Filters => {
         if (typeof value !== 'string')
           throw new UnsupportedQueryError(
             `Unsupported data type for CompanyCode: ${JSON.stringify(value)}`,
+            '$filter',
           );
         setOnce('companyCode', value);
         break;
@@ -142,18 +154,23 @@ const readWhere = (where: CqnSelect['where']): Filters => {
         if (typeof value !== 'string')
           throw new UnsupportedQueryError(
             `Unsupported data type for Currency: ${JSON.stringify(value)}`,
+            '$filter',
           );
         setOnce('currency', value);
         break;
       case 'ItemType':
         if (!isItemType(value))
-          throw new UnsupportedQueryError(`Unsupported ItemType value: ${JSON.stringify(value)}`);
+          throw new UnsupportedQueryError(
+            `Unsupported ItemType value: ${JSON.stringify(value)}`,
+            '$filter',
+          );
         setOnce('itemType', value);
         break;
       case 'IsOverdue':
         if (typeof value !== 'boolean')
           throw new UnsupportedQueryError(
             `Unsupported data type for IsOverdue: ${JSON.stringify(value)}`,
+            '$filter',
           );
         setOnce('overdue', value);
         break;
@@ -161,12 +178,13 @@ const readWhere = (where: CqnSelect['where']): Filters => {
         if (typeof value !== 'string')
           throw new UnsupportedQueryError(
             `Unsupported data type for BusinessPartner: ${JSON.stringify(value)}`,
+            '$filter',
           );
         setOnce('businessPartners', [value]);
         break;
 
       default:
-        throw new UnsupportedQueryError(`Filtering by '${field}' is not supported`);
+        throw new UnsupportedQueryError(`Filtering by '${field}' is not supported`, '$filter');
     }
   }
 

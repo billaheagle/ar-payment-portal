@@ -17,7 +17,10 @@ export interface CqnSelect {
 }
 
 export class UnsupportedQueryError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly option: string,
+  ) {
     super(message);
     this.name = 'UnsupportedQueryError';
   }
@@ -31,15 +34,15 @@ export const readLimit = (limit: CqnSelect['limit']): { top: number; skip: numbe
   const offset = limit?.offset?.val ?? 0;
 
   if (!isNonNegativeInteger(rows)) {
-    throw new UnsupportedQueryError(`Invalid $top: ${JSON.stringify(rows)}`);
+    throw new UnsupportedQueryError(`Invalid $top: ${JSON.stringify(rows)}`, '$top');
   }
   if (!isNonNegativeInteger(offset)) {
-    throw new UnsupportedQueryError(`Invalid $skip: ${JSON.stringify(offset)}`);
+    throw new UnsupportedQueryError(`Invalid $skip: ${JSON.stringify(offset)}`, '$skip');
   }
 
   return { top: rows, skip: offset };
 };
 
 export const rejectSearch = (search: CqnSelect['search']): void => {
-  if (search !== undefined) throw new UnsupportedQueryError(`$search is not supported`);
+  if (search !== undefined) throw new UnsupportedQueryError(`$search is not supported`, '$search');
 };

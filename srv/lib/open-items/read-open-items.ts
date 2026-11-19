@@ -12,6 +12,7 @@ import { loadScope, permissionsFor, type UserScope, visiblePartners } from '../a
 import { UnsupportedQueryError, type CqnSelect } from '../odata/query';
 import { payabilityOf, type Payability } from './payability';
 import { blockedKeys } from './blocked-keys';
+import { AppError, reject } from '../errors';
 
 const readOneOpenItem = async (req: cds.Request, scope: UserScope, todayIso: string) => {
   const allowed = visiblePartners(scope);
@@ -60,7 +61,7 @@ export const readOpenItems = async (req: cds.Request) => {
     requested = toRequestedQuery(req.query.SELECT as CqnSelect);
   } catch (error) {
     if (error instanceof UnsupportedQueryError) {
-      return req.reject({ status: 400, code: 'UNSUPPORTED_QUERY', message: error.message });
+      return reject(req, new AppError('UNSUPPORTED_QUERY', [error.option]));
     }
     throw error;
   }

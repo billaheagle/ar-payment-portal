@@ -10,6 +10,7 @@ import {
 } from '../authz/scope';
 import { dataSource } from '../datasource/factory';
 import { readLimit, rejectSearch, UnsupportedQueryError, type CqnSelect } from '../odata/query';
+import { AppError, reject } from '../errors';
 
 const readOneBusinessPartner = async (req: cds.Request, scope: UserScope) => {
   const [raw] = req.params as unknown[];
@@ -47,7 +48,7 @@ export const readBusinessPartners = async (req: cds.Request) => {
     limit = readLimit(select.limit);
   } catch (error) {
     if (error instanceof UnsupportedQueryError) {
-      return req.reject({ status: 400, code: 'UNSUPPORTED_QUERY', message: error.message });
+      return reject(req, new AppError('UNSUPPORTED_QUERY', [error.option]));
     }
     throw error;
   }
