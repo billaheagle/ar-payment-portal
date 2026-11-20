@@ -26,7 +26,9 @@ Built with **SAP CAP (Node.js, strict TypeScript)** and **SAPUI5** (Fiori Elemen
 | OData query translation (filters, sorting, paging, single item by key)                                                    | ✅ Done, unit- and integration-tested |
 | Per-business-partner authorisation (open items, business partners, portal tables)                                         | ✅ Done, unit- and integration-tested |
 | Payability per item (`IsPayable`, `NotPayableReason`) and business partner value help                                     | ✅ Done                               |
-| Payments and mock payment provider                                                                                        | ⏳ Next                               |
+| Error catalog (spec 14.1) with i18n messages                                                                              | ✅ Done, unit-tested                  |
+| Admin: user assignment management (Fiori Elements with draft, BR-01–BR-03)                                                | ✅ Done, unit- and integration-tested |
+| Payments and mock payment provider                                                                                        | ⏳ In progress                        |
 | Webhooks, outbox, reliability                                                                                             | Planned                               |
 | PostgreSQL, reconcile job, multi-instance                                                                                 | Planned                               |
 | Disputes                                                                                                                  | Planned                               |
@@ -43,7 +45,7 @@ npm run watch        # CAP server on http://localhost:4004 (backend only)
 npm run watch:ui     # CAP server including the Open Items app
 ```
 
-Open the Open Items app from the index page at `http://localhost:4004` and sign in with a mocked user:
+Open the apps from the index page at `http://localhost:4004` and sign in with a mocked user: **Open Items** for customer users, **Assignments** for the portal admin.
 
 | User                | Password | Role                                |
 | ------------------- | -------- | ----------------------------------- |
@@ -53,21 +55,24 @@ Open the Open Items app from the index page at `http://localhost:4004` and sign 
 | `dave@nobody.test`  | `test`   | CustomerUser (no business partners) |
 | `admin@portal.test` | `test`   | PortalAdmin                         |
 
+Mocked users use Basic Auth, so a browser keeps the first login until it is closed. Use a separate browser profile per user, or `curl -u <user>:test`.
+
 The data source is chosen in `package.json` under `cds.arportal.dataSource`: `mock-s4` (default) or `mock-ecc`. Both return the same open items.
 
 ## Scripts
 
-| Script                 | What it does                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------ |
-| `npm run watch`        | Start CAP for backend work (UI5 plugin disabled, fast restarts)                |
-| `npm run watch:ui`     | Start CAP with the UI5 app served through `cds-plugin-ui5` (needs a 4 GB heap) |
-| `npm run typer`        | Generate TypeScript types from the CDS model into `@cds-models/`               |
-| `npm test`             | Run unit and integration tests with the Node.js test runner (`node:test`)      |
-| `npm run typecheck`    | Type-check the backend with `tsc --noEmit`                                     |
-| `npm run lint`         | ESLint with `typescript-eslint` strict type-checked rules                      |
-| `npm run format`       | Format all files with Prettier                                                 |
-| `npm run format:check` | Check formatting without changing files (used in CI)                           |
-| `npm run check`        | Lint, format check, type check and tests in one go; run before every commit    |
+| Script                                                        | What it does                                                                    |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `npm run watch`                                               | Start CAP for backend work (UI5 plugin disabled, fast restarts)                 |
+| `npm run watch:ui`                                            | Start CAP with the UI5 apps served through `cds-plugin-ui5` (needs a 4 GB heap) |
+| `npm run watch-openitems` / `npm run watch-admin-assignments` | Same as `watch:ui`, opening one app directly                                    |
+| `npm run typer`                                               | Generate TypeScript types from the CDS model into `@cds-models/`                |
+| `npm test`                                                    | Run unit and integration tests with the Node.js test runner (`node:test`)       |
+| `npm run typecheck`                                           | Type-check the backend with `tsc --noEmit`                                      |
+| `npm run lint`                                                | ESLint with `typescript-eslint` strict type-checked rules                       |
+| `npm run format`                                              | Format all files with Prettier                                                  |
+| `npm run format:check`                                        | Check formatting without changing files (used in CI)                            |
+| `npm run check`                                               | Lint, format check, type check and tests in one go; run before every commit     |
 
 Tests run with `CDS_PLUGIN_UI5_ACTIVE=false`: integration tests only need the OData service, and starting the UI5 tooling in every test server exhausts memory.
 
@@ -76,8 +81,9 @@ CI runs `npm ci`, type generation, lint, format check, type check, tests and a p
 ## Project structure
 
 ```text
-app/openitems/                      Fiori Elements list report (UI5, TypeScript)
-_i18n/                              texts for CDS annotations (labels, entity names)
+app/openitems/                      Fiori Elements list report for customers (UI5, TypeScript)
+app/admin-assignments/              Fiori Elements list report + object page with draft for admins
+_i18n/                              texts for CDS annotations (labels) and error messages (messages.properties)
 db/
   types.cds                         enums and the ItemKey aspect
   schema.cds                        portal entities and virtual entities
@@ -85,11 +91,13 @@ db/
   data/                             seed data (CSV)
 srv/
   customer-service.cds / .ts        CustomerService definition and handlers
+  admin-service.cds / .ts           AdminService: user assignments with validation on activate
   lib/
     money.ts                        amounts as integer cents
     clock.ts                        injectable clock for "now" and "today"
     dates.ts                        ISO date helpers, always in UTC
-    authz/                          user scope from UserAssignments, scope restriction for portal tables
+    errors.ts                       error catalog (code → HTTP status), AppError and reject helper
+    authz/                          user scope, scope restriction for portal tables, assignment rules
     business-partners/              business partner read handler (value help)
     odata/                          shared OData query helpers ($top/$skip, unsupported query error)
     datasource/                     ArDataSource interface, factory, shared helpers
@@ -120,6 +128,8 @@ test/
 - **Portal tables are restricted, not rewritten.** `Payments`, `PaymentItems` and `Disputes` keep CAP's generic handlers; a `before('READ')` handler adds the scope condition with AND (through `Payment.BusinessPartner` for payment items), so filters and keys from the request still apply.
 - **Out of scope looks like not found.** Reading an item, business partner, payment or dispute of another customer returns 404 with the same message as a missing one, so other customers' data cannot be probed.
 - **Payability is a pure rule.** An item is not payable without pay permission, with an open dispute, or while a pending payment reserves it, in that priority; only the first reason is reported.
+- **One error catalog.** Every error code from the specification lives in `srv/lib/errors.ts` with its HTTP status; messages live in `_i18n/messages.properties` under the same key. Pure functions throw `AppError`, and handlers turn it into `req.reject({ status, code, message, args, target })`. A unit test fails when a code has no message or a message has no code.
+- **Assignments are validated on activation.** Admins edit `UserAssignments` as drafts; a `before('SAVE')` handler normalises the user ID and checks BR-01 and BR-02 on the complete record. Duplicates are checked explicitly so the API returns `409 ASSIGNMENT_DUPLICATE`; the unique constraint stays as a safety net. Customer and admin roles are separate (`@requires`), and a deactivated assignment takes effect on the next request.
 - **Pure functions first.** Business rules live in small pure functions under `srv/lib/` that can be tested without starting CAP; service handlers stay thin.
 - **Failures are explicit.** Invalid input throws; expected business outcomes (such as retries being exhausted or a webhook being rejected) are returned as values.
 
