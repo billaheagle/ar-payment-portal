@@ -15,45 +15,44 @@
  * ╚═══════════════════════════════════════════════════════════════════════╝ *
  ******************************************************************************/
 
-import opaTest from "sap/ui/test/opaQunit";
-import type { Given, When, Then } from "./types/OpaJourneyTypes.gen";
-import runner from "./pages/JourneyRunner";
+import opaTest from 'sap/ui/test/opaQunit';
+import type { Given, When, Then } from './types/OpaJourneyTypes.gen';
+import runner from './pages/JourneyRunner';
 
 function journey() {
-    QUnit.module("UserAssignmentsListListReport journey");
+  QUnit.module('UserAssignmentsListListReport journey');
 
-    const defaultTableId = "";
+  const defaultTableId = '';
 
-    opaTest("Start application", function (Given: Given, _When: When, Then: Then) {
-        Given.iResetMockData({ ServiceUri: "/odata/v4/admin/" });
-        Given.iResetTestData();
-        Given.iStartMyApp();
+  opaTest('Start application', function (Given: Given, _When: When, Then: Then) {
+    Given.iResetMockData({ ServiceUri: '/odata/v4/admin/' });
+    Given.iResetTestData();
+    Given.iStartMyApp();
 
-        Then.onTheUserAssignmentsListGenerated.iSeeThisPage();
-    });
+    Then.onTheUserAssignmentsListGenerated.iSeeThisPage();
+  });
 
+  // Note: this test will only work if the ListReport page has a search field and shows data that matches the search term. Please ensure that the test data and search term are set up accordingly.
+  // opaTest("Perform a global search and check the result", function (Given: Given, When: When, Then: Then) {
+  //     When.onTheUserAssignmentsListGenerated.onFilterBar().iChangeSearchField("Search Term");
+  //     When.onTheUserAssignmentsListGenerated.onFilterBar().iExecuteSearch();
+  //     Then.onTheUserAssignmentsListGenerated.onTable(defaultTableId).iCheckRows();
+  //     When.onTheUserAssignmentsListGenerated.onFilterBar().iChangeSearchField(undefined);
+  //     Then.onTheUserAssignmentsListGenerated.onFilterBar().iCheckSearchField(undefined);
+  // });
 
-    // Note: this test will only work if the ListReport page has a search field and shows data that matches the search term. Please ensure that the test data and search term are set up accordingly.
-    // opaTest("Perform a global search and check the result", function (Given: Given, When: When, Then: Then) {
-    //     When.onTheUserAssignmentsListGenerated.onFilterBar().iChangeSearchField("Search Term");
-    //     When.onTheUserAssignmentsListGenerated.onFilterBar().iExecuteSearch();
-    //     Then.onTheUserAssignmentsListGenerated.onTable(defaultTableId).iCheckRows();
-    //     When.onTheUserAssignmentsListGenerated.onFilterBar().iChangeSearchField(undefined);
-    //     Then.onTheUserAssignmentsListGenerated.onFilterBar().iCheckSearchField(undefined);
-    // });
+  opaTest('Navigate to ObjectPage', function (_Given: Given, When: When, Then: Then) {
+    // Note: this test will fail if the ListReport page doesn't show any data
+    When.onTheUserAssignmentsListGenerated.onFilterBar().iExecuteSearch();
+    Then.onTheUserAssignmentsListGenerated.onTable(defaultTableId).iCheckRows();
+    When.onTheUserAssignmentsListGenerated.onTable(defaultTableId).iPressRow(0);
+    Then.onTheUserAssignmentsObjectPageGenerated.iSeeThisPage();
+  });
 
-    opaTest("Navigate to ObjectPage", function (_Given: Given, When: When, Then: Then) {
-        // Note: this test will fail if the ListReport page doesn't show any data
-        When.onTheUserAssignmentsListGenerated.onFilterBar().iExecuteSearch();
-        Then.onTheUserAssignmentsListGenerated.onTable(defaultTableId).iCheckRows();
-        When.onTheUserAssignmentsListGenerated.onTable(defaultTableId).iPressRow(0);
-        Then.onTheUserAssignmentsObjectPageGenerated.iSeeThisPage();
-    });
-
-    opaTest("Teardown", function (Given: Given) {
-        // Cleanup
-        Given.iTearDownMyApp();
-    });
+  opaTest('Teardown', function (Given: Given) {
+    // Cleanup
+    Given.iTearDownMyApp();
+  });
 }
 
 runner.run([journey]);

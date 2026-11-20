@@ -11,14 +11,29 @@
  * ╚═══════════════════════════════════════════════════════════════════════╝ *
  ******************************************************************************/
 
-import type Opa5 from "sap/ui/test/Opa5";
-import type { actions as ListReportActions, assertions as ListReportAssertions } from "sap/fe/test/ListReport";
-import type { actions as ObjectPageActions, assertions as ObjectPageAssertions } from "sap/fe/test/ObjectPage";
-import type { actions as TemplatePageActions, assertions as TemplatePageAssertions } from "sap/fe/test/TemplatePage";
-import type Shell from "sap/fe/test/Shell";
-import type BaseArrangements from "sap/fe/test/BaseArrangements";
-import type { actions as UserAssignmentsListGeneratedCustomActions, assertions as UserAssignmentsListGeneratedCustomAssertions } from "../pages/UserAssignmentsList.gen";
-import type { actions as UserAssignmentsObjectPageGeneratedCustomActions, assertions as UserAssignmentsObjectPageGeneratedCustomAssertions } from "../pages/UserAssignmentsObjectPage.gen";
+import type Opa5 from 'sap/ui/test/Opa5';
+import type {
+  actions as ListReportActions,
+  assertions as ListReportAssertions,
+} from 'sap/fe/test/ListReport';
+import type {
+  actions as ObjectPageActions,
+  assertions as ObjectPageAssertions,
+} from 'sap/fe/test/ObjectPage';
+import type {
+  actions as TemplatePageActions,
+  assertions as TemplatePageAssertions,
+} from 'sap/fe/test/TemplatePage';
+import type Shell from 'sap/fe/test/Shell';
+import type BaseArrangements from 'sap/fe/test/BaseArrangements';
+import type {
+  actions as UserAssignmentsListGeneratedCustomActions,
+  assertions as UserAssignmentsListGeneratedCustomAssertions,
+} from '../pages/UserAssignmentsList.gen';
+import type {
+  actions as UserAssignmentsObjectPageGeneratedCustomActions,
+  assertions as UserAssignmentsObjectPageGeneratedCustomAssertions,
+} from '../pages/UserAssignmentsObjectPage.gen';
 
 /**
  * Enables OPA5 fluent `.and` chaining on page objects and their sub-objects.
@@ -28,31 +43,62 @@ import type { actions as UserAssignmentsObjectPageGeneratedCustomActions, assert
  * When.onTheListReportGenerated.onFilterBar().iExecuteSearch().and.iClearFilterBar();
  */
 type WithAnd<T> = {
-    [K in keyof T | 'and']: K extends 'and'
-        ? WithAnd<T>
-        : K extends keyof T
-        ? T[K] extends (...args: infer A) => infer R
-            ? (...args: A) => (R extends Opa5 | object ? (keyof R extends never ? WithAnd<T> : [R] extends [Opa5] ? WithAnd<T> : WithAnd<R>) : WithAnd<T>)
-            : T[K]
-        : never;
+  [K in keyof T | 'and']: K extends 'and'
+    ? WithAnd<T>
+    : K extends keyof T
+      ? T[K] extends (...args: infer A) => infer R
+        ? (
+            ...args: A
+          ) => R extends Opa5 | object
+            ? keyof R extends never
+              ? WithAnd<T>
+              : [R] extends [Opa5]
+                ? WithAnd<T>
+                : WithAnd<R>
+            : WithAnd<T>
+        : T[K]
+      : never;
 };
 
-export type Given = Opa5 & BaseArrangements & {
+export type Given = Opa5 &
+  BaseArrangements & {
     iTearDownMyApp: () => Given;
     iStartMyApp: (sAppHash?: string, mInUrlParameters?: object) => Given;
     iResetMockData: (oAppInfo?: { AppId?: string; ServiceUri?: string }) => Given;
     iResetTestData: () => Given;
     and: Given;
-};
+  };
 
-export type When = Opa5 & BaseArrangements & {
-    onTheUserAssignmentsListGenerated: WithAnd<Opa5 & ListReportActions & TemplatePageActions & typeof UserAssignmentsListGeneratedCustomActions>;
-    onTheUserAssignmentsObjectPageGenerated: WithAnd<Opa5 & ObjectPageActions & TemplatePageActions & typeof UserAssignmentsObjectPageGeneratedCustomActions>;
+export type When = Opa5 &
+  BaseArrangements & {
+    onTheUserAssignmentsListGenerated: WithAnd<
+      Opa5 &
+        ListReportActions &
+        TemplatePageActions &
+        typeof UserAssignmentsListGeneratedCustomActions
+    >;
+    onTheUserAssignmentsObjectPageGenerated: WithAnd<
+      Opa5 &
+        ObjectPageActions &
+        TemplatePageActions &
+        typeof UserAssignmentsObjectPageGeneratedCustomActions
+    >;
     onTheShell: Shell;
-};
+  };
 
-export type Then = Opa5 & BaseArrangements & {
-    onTheUserAssignmentsListGenerated: WithAnd<Opa5 & ListReportAssertions & TemplatePageAssertions & typeof UserAssignmentsListGeneratedCustomAssertions>;
-    onTheUserAssignmentsObjectPageGenerated: WithAnd<Opa5 & ObjectPageAssertions & TemplatePageAssertions & typeof UserAssignmentsObjectPageGeneratedCustomAssertions>;
+export type Then = Opa5 &
+  BaseArrangements & {
+    onTheUserAssignmentsListGenerated: WithAnd<
+      Opa5 &
+        ListReportAssertions &
+        TemplatePageAssertions &
+        typeof UserAssignmentsListGeneratedCustomAssertions
+    >;
+    onTheUserAssignmentsObjectPageGenerated: WithAnd<
+      Opa5 &
+        ObjectPageAssertions &
+        TemplatePageAssertions &
+        typeof UserAssignmentsObjectPageGeneratedCustomAssertions
+    >;
     onTheShell: Shell;
-};
+  };

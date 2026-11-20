@@ -15,30 +15,31 @@
  * ╚═══════════════════════════════════════════════════════════════════════╝ *
  ******************************************************************************/
 
-import opaTest from "sap/ui/test/opaQunit";
-import type { Given, When, Then } from "./types/OpaJourneyTypes.gen";
-import runner from "./pages/JourneyRunner";
+import opaTest from 'sap/ui/test/opaQunit';
+import type { Given, When, Then } from './types/OpaJourneyTypes.gen';
+import runner from './pages/JourneyRunner';
 
 function journey() {
-    QUnit.module("UserAssignmentsObjectPageObjectPage journey");
+  QUnit.module('UserAssignmentsObjectPageObjectPage journey');
 
-    opaTest("Navigate to UserAssignmentsObjectPageObjectPage", function (Given: Given, When: When, Then: Then) {
-        Given.iResetMockData({ ServiceUri: "/odata/v4/admin/" });
-        Given.iResetTestData();
-        Given.iStartMyApp();
-        When.onTheUserAssignmentsListGenerated.onFilterBar().iExecuteSearch();
-        Then.onTheUserAssignmentsListGenerated.onTable("").iCheckRows();
-        When.onTheUserAssignmentsListGenerated.onTable("").iPressRow(0);
+  opaTest(
+    'Navigate to UserAssignmentsObjectPageObjectPage',
+    function (Given: Given, When: When, Then: Then) {
+      Given.iResetMockData({ ServiceUri: '/odata/v4/admin/' });
+      Given.iResetTestData();
+      Given.iStartMyApp();
+      When.onTheUserAssignmentsListGenerated.onFilterBar().iExecuteSearch();
+      Then.onTheUserAssignmentsListGenerated.onTable('').iCheckRows();
+      When.onTheUserAssignmentsListGenerated.onTable('').iPressRow(0);
 
-        Then.onTheUserAssignmentsObjectPageGenerated.iSeeThisPage();
-    });
+      Then.onTheUserAssignmentsObjectPageGenerated.iSeeThisPage();
+    },
+  );
 
-
-
-    opaTest("Teardown", function (Given: Given) {
-        // Cleanup
-        Given.iTearDownMyApp();
-    });
+  opaTest('Teardown', function (Given: Given) {
+    // Cleanup
+    Given.iTearDownMyApp();
+  });
 }
 
 runner.run([journey]);
