@@ -21,15 +21,16 @@
   "scripts": {
     "watch": "CDS_PLUGIN_UI5_ACTIVE=false cds-tsx watch",
     "watch:ui": "NODE_OPTIONS=--max-old-space-size=4096 cds-tsx watch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p psp-mock",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "CDS_PLUGIN_UI5_ACTIVE=false node --import tsx --test \"test/**/*.test.ts\"",
+    "test": "CDS_PLUGIN_UI5_ACTIVE=false node --import tsx --test \"test/**/*.test.ts\" \"psp-mock/test/**/*.test.ts\"",
     "typer": "cds-typer \"*\" --outputDirectory @cds-models",
     "check": "npm run lint && npm run format:check && npm run typecheck && npm test",
     "watch-openitems": "NODE_OPTIONS=--max-old-space-size=4096 cds-tsx watch --open arportal.openitems/index.html?sap-ui-xx-viewCache=false --livereload false",
-    "watch-admin-assignments": "NODE_OPTIONS=--max-old-space-size=4096 cds-tsx watch --open arportal.adminassignments/index.html?sap-ui-xx-viewCache=false --livereload false"
+    "watch-admin-assignments": "NODE_OPTIONS=--max-old-space-size=4096 cds-tsx watch --open arportal.adminassignments/index.html?sap-ui-xx-viewCache=false --livereload false",
+    "psp": "npm run dev -w psp-mock"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
@@ -81,7 +82,8 @@
     "@sap/cds": "10.2.2"
   },
   "workspaces": [
-    "app/*"
+    "app/*",
+    "psp-mock"
   ],
   "sapux": [
     "app/openitems",
