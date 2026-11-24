@@ -112,3 +112,40 @@ export const cancelCheckout = (store: CheckoutStore, id: string, now: Date): Can
   checkout.status = 'CANCELLED';
   return { kind: 'cancelled', checkout };
 };
+
+export type PayOutcome = 'success' | 'decline';
+
+export type PayResult =
+  { kind: 'processed'; checkout: Checkout } | { kind: 'not_open' } | { kind: 'not_found' };
+
+export const payCheckout = (
+  store: CheckoutStore,
+  id: string,
+  outcome: PayOutcome,
+  now: Date,
+): PayResult => {
+  const checkout = store.checkouts.get(id);
+  if (checkout === undefined) return { kind: 'not_found' };
+  if (!isOpen(checkout, now)) return { kind: 'not_open' };
+
+  if (outcome === 'success') {
+    checkout.status = 'SUCCEEDED';
+    checkout.paymentId = `pay_${randomBytes(12).toString('hex')}`;
+    return { kind: 'processed', checkout };
+  }
+
+  checkout.status = 'FAILED';
+  return { kind: 'processed', checkout };
+};
+
+export const expireCheckouts = (store: CheckoutStore, now: Date): Checkout[] => {
+  const expired = [...store.checkouts.values()].filter(
+    (checkout) => checkout.status === 'OPEN' && !isOpen(checkout, now),
+  );
+
+  for (const checkout of expired) {
+    checkout.status = 'EXPIRED';
+  }
+
+  return expired;
+};

@@ -4,8 +4,10 @@ import {
   cancelCheckout,
   CheckoutValidationError,
   createCheckout,
+  expireCheckouts,
   findByReference,
   parseCheckoutInput,
+  payCheckout,
 } from '../src/checkouts';
 import type { CreateContext, CreateResult } from '../src/checkouts';
 import { createStore } from '../src/store';
@@ -76,40 +78,23 @@ describe('parseCheckoutInput (spec 11.2)', () => {
   });
 
   it('rejects invalid amounts', () => {
-    [350, '350', '350.5', '350.555', '0.00', '-1.00'].forEach((e) => {
-      expectInvalid({ amount: e, currency: 'EUR', reference: 'PAY-1' }, /amount/);
+    [350, '350', '350.5', '350.555', '0.00', '-1.00'].forEach((amount) => {
+      expectInvalid({ amount: amount, currency: 'EUR', reference: 'PAY-1' }, /amount/);
     });
   });
 
   it('rejects invalid currency, reference and returnUrl', () => {
-    assert.throws(
-      () => parseCheckoutInput({ amount: '350.00', currency: 'eur', reference: 'PAY-1' }),
-      /currency/,
-    );
-
-    assert.throws(
-      () => parseCheckoutInput({ amount: '350.00', currency: 'EURO', reference: 'PAY-1' }),
-      /currency/,
-    );
-
-    assert.throws(
-      () => parseCheckoutInput({ amount: '350.00', currency: 'EUR', reference: '' }),
-      /reference/,
-    );
-
-    assert.throws(
-      () => parseCheckoutInput({ amount: '350.00', currency: 'EUR', reference: 'x'.repeat(36) }),
-      /reference/,
-    );
-
-    assert.throws(
-      () =>
-        parseCheckoutInput({
-          amount: '350.00',
-          currency: 'EUR',
-          reference: 'PAY-1',
-          returnUrl: 123,
-        }),
+    expectInvalid({ amount: '350.00', currency: 'eur', reference: 'PAY-1' }, /currency/);
+    expectInvalid({ amount: '350.00', currency: 'EURO', reference: 'PAY-1' }, /currency/);
+    expectInvalid({ amount: '350.00', currency: 'EUR', reference: '' }, /reference/);
+    expectInvalid({ amount: '350.00', currency: 'EUR', reference: 'x'.repeat(36) }, /reference/);
+    expectInvalid(
+      {
+        amount: '350.00',
+        currency: 'EUR',
+        reference: 'PAY-1',
+        returnUrl: 123,
+      },
       /returnUrl/,
     );
   });
@@ -135,15 +120,7 @@ describe('createCheckout (spec 11.2)', () => {
 
   it('treats the same body with a different key order as the same request', () => {
     const store = createStore();
-    expectKind(
-      createCheckout(
-        store,
-        'k',
-        { reference: 'PAY-TEST0001', currency: 'EUR', amount: '350.00' },
-        ctx,
-      ),
-      'created',
-    );
+    expectKind(createCheckout(store, 'k', input(), ctx), 'created');
 
     expectKind(
       createCheckout(
@@ -250,5 +227,133 @@ describe('cancelCheckout (spec 11.2)', () => {
     const find = findByReference(store, 'PAY-A');
     assert.equal(find.length, 1);
     assert.ok(find.every((c) => c.status === 'OPEN'));
+  });
+});
+
+describe('payCheckout (spec 11.3)', () => {
+  it('marks an open checkout SUCCEEDED with a payment id', () => {
+    const store = createStore();
+
+    const { checkout } = expectKind(
+      createCheckout(store, 'k', input({ reference: 'PAY-A' }), ctx),
+      'created',
+    );
+
+    const pay = payCheckout(store, checkout.id, 'success', NOW);
+    assert.equal(pay.kind, 'processed');
+    assert.equal(pay.checkout.status, 'SUCCEEDED');
+    assert.match(pay.checkout.paymentId ?? '', /^pay_[0-9a-f]{24}$/);
+  });
+
+  it('marks an open checkout FAILED without a payment id on decline', () => {
+    const store = createStore();
+
+    const { checkout } = expectKind(
+      createCheckout(store, 'k', input({ reference: 'PAY-A' }), ctx),
+      'created',
+    );
+
+    const pay = payCheckout(store, checkout.id, 'decline', NOW);
+    assert.equal(pay.kind, 'processed');
+    assert.equal(pay.checkout.status, 'FAILED');
+    assert.equal(pay.checkout.paymentId, undefined);
+  });
+
+  it('does not pay a checkout twice', () => {
+    const store = createStore();
+
+    const { checkout } = expectKind(
+      createCheckout(store, 'k', input({ reference: 'PAY-REPAY' }), ctx),
+      'created',
+    );
+
+    const firstPay = payCheckout(store, checkout.id, 'success', NOW);
+    assert.equal(firstPay.kind, 'processed');
+    assert.equal(firstPay.checkout.status, 'SUCCEEDED');
+    assert.match(firstPay.checkout.paymentId ?? '', /^pay_[0-9a-f]{24}$/);
+
+    const secondPay = payCheckout(store, checkout.id, 'success', NOW);
+    assert.equal(secondPay.kind, 'not_open');
+
+    const find = findByReference(store, checkout.reference);
+    assert.ok(find.every((c) => c.paymentId === firstPay.checkout.paymentId));
+  });
+
+  it('does not pay an expired or cancelled checkout', () => {
+    const store = createStore();
+
+    const { checkout } = expectKind(
+      createCheckout(store, 'k', input({ reference: 'PAY-REPAY' }), ctx),
+      'created',
+    );
+
+    const expired = payCheckout(
+      store,
+      checkout.id,
+      'success',
+      new Date('2026-11-01T00:31:00.000Z'),
+    );
+    assert.equal(expired.kind, 'not_open');
+
+    const cancel = cancelCheckout(store, checkout.id, NOW);
+    assert.equal(cancel.kind, 'cancelled');
+    const canceledPay = payCheckout(store, checkout.id, 'success', NOW);
+    assert.equal(canceledPay.kind, 'not_open');
+  });
+
+  it('returns not_found for an unknown id', () => {
+    const store = createStore();
+    const unknown = payCheckout(store, 'unknown_id', 'success', NOW);
+    assert.equal(unknown.kind, 'not_found');
+  });
+});
+
+describe('expireCheckouts (spec 11.3)', () => {
+  it('expires only open checkouts past expiresAt', () => {
+    const store = createStore();
+
+    const { checkout: checkoutA } = expectKind(
+      createCheckout(store, 'k1', input({ reference: 'PAY-A' }), ctx),
+      'created',
+    );
+
+    const { checkout: checkoutB } = expectKind(
+      createCheckout(store, 'k2', input({ reference: 'PAY-B' }), ctx),
+      'created',
+    );
+    const cancel = cancelCheckout(store, checkoutB.id, NOW);
+    assert.equal(cancel.kind, 'cancelled');
+
+    const { checkout: checkoutC } = expectKind(
+      createCheckout(store, 'k3', input({ reference: 'PAY-C' }), ctx),
+      'created',
+    );
+    const pay = payCheckout(store, checkoutC.id, 'success', NOW);
+    assert.equal(pay.kind, 'processed');
+    assert.equal(pay.checkout.status, 'SUCCEEDED');
+    assert.match(pay.checkout.paymentId ?? '', /^pay_[0-9a-f]{24}$/);
+
+    const expired = expireCheckouts(store, new Date('2026-11-01T00:31:00.000Z'));
+    assert.deepEqual(
+      expired.map((c) => c.id),
+      [checkoutA.id],
+    );
+
+    assert.equal(checkoutA.status, 'EXPIRED');
+    assert.equal(checkoutB.status, 'CANCELLED');
+    assert.equal(checkoutC.status, 'SUCCEEDED');
+    assert.deepEqual(expireCheckouts(store, new Date('2026-11-01T00:32:00.000Z')), []);
+  });
+
+  it('leaves checkouts alone before expiresAt', () => {
+    const store = createStore();
+
+    const { checkout: checkoutA } = expectKind(
+      createCheckout(store, 'k1', input({ reference: 'PAY-A' }), ctx),
+      'created',
+    );
+    const expired = expireCheckouts(store, new Date('2026-11-01T00:30:00.000Z'));
+    assert.deepEqual(expired, []);
+    assert.equal(checkoutA.status, 'OPEN');
   });
 });
