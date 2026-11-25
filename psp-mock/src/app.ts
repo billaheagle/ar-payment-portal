@@ -12,10 +12,12 @@ import {
   type PayRequest,
   type CreateContext,
 } from './checkouts';
-import type { PspConfig } from './config';
+import { loadConfig, type PspConfig } from './config';
 import type { CheckoutStore } from './store';
 import type { CheckoutInput } from './types';
 import { renderCheckoutPage } from './checkout-page';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const sendError = (res: Response, status: number, code: string, message: string): void => {
   res.status(status).json({ error: { code, message } });
@@ -162,5 +164,21 @@ export const createApp = (
         return;
     }
   });
+
+  // Read once when the app is created, not on every request
+  const widgetScript = readFileSync(join(__dirname, '..', 'public', 'widget.js'), 'utf8')
+    // Fill in the value only the server knows
+    .replace('__PSP_ORIGIN__', new URL(config.publicUrl).origin);
+
+  app.get('/widget.js', (_req, res) => {
+    res.type('application/javascript').send(widgetScript);
+  });
+
+  const demoPage = readFileSync(join(__dirname, '..', 'public', 'demo.html'), 'utf8');
+
+  app.get('/demo', (_req, res) => {
+    res.type('html').send(demoPage);
+  });
+
   return app;
 };

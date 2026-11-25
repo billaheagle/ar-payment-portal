@@ -250,5 +250,25 @@ describe('Mock PSP API (spec 11.2)', () => {
       const { error } = (await payment.json()) as ErrorBody;
       assert.equal(error.code, 'VALIDATION_FAILED');
     });
+
+    it('serves the widget with the PSP origin filled in', async () => {
+      const res = await fetch(`${rootUrl}/widget.js`);
+      assert.equal(res.status, 200);
+
+      assert.match(res.headers.get('content-type') ?? '', /javascript/);
+
+      const text = await res.text();
+      assert.ok(text.includes('http://localhost:4005'));
+      assert.ok(!text.includes('__PSP_ORIGIN__'));
+    });
+
+    it('serves the demo page', async () => {
+      const res = await fetch(`${rootUrl}/demo`);
+      assert.equal(res.status, 200);
+      assert.match(res.headers.get('content-type') ?? '', /text\/html/);
+
+      const text = await res.text();
+      assert.ok(text.includes('/widget.js'));
+    });
   });
 });

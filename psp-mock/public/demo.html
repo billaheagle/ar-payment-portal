@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mock PSP widget demo</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 640px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      input {
+        width: 100%;
+        padding: 0.4rem;
+      }
+      #log {
+        background: #f4f4f4;
+        padding: 0.8rem;
+        min-height: 3rem;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Widget demo</h1>
+    <label
+      >Checkout URL <input id="url" placeholder="paste the url from POST /v1/checkouts"
+    /></label>
+    <p><button id="mount">Mount</button> <button id="unmount">Unmount</button></p>
+    <div id="container"></div>
+    <h2>Events</h2>
+    <div id="log"></div>
+    <script src="/widget.js"></script>
+    <script>
+      var handle = null;
+      var log = document.getElementById('log');
+      document.getElementById('mount').addEventListener('click', function () {
+        if (handle) handle.unmount();
+        handle = window.MockPsp.mount(document.getElementById('container'), {
+          checkoutUrl: document.getElementById('url').value.trim(),
+          onEvent: function (event) {
+            log.textContent += JSON.stringify(event) + '\n';
+          },
+        });
+      });
+      document.getElementById('unmount').addEventListener('click', function () {
+        if (handle) {
+          handle.unmount();
+          handle = null;
+        }
+      });
+    </script>
+  </body>
+</html>

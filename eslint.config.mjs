@@ -11,6 +11,7 @@ export default [
       'app/**/webapp/**',
       'psp-mock/',
       'eslint.config.mjs',
+      'psp-mock/public/**',
     ],
   },
   js.configs.recommended,
