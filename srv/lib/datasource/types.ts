@@ -1,5 +1,5 @@
-export const ITEM_TYPE = ['INVOICE', 'CREDIT_MEMO', 'RESIDUAL'] as const;
-export type ItemType = (typeof ITEM_TYPE)[number];
+export const ITEM_TYPES = ['INVOICE', 'CREDIT_MEMO', 'RESIDUAL'] as const;
+export type ItemType = (typeof ITEM_TYPES)[number];
 
 export const ORDER_BY_FIELDS = [
   'NetDueDate',
@@ -9,11 +9,11 @@ export const ORDER_BY_FIELDS = [
 ] as const;
 export type OrderByField = (typeof ORDER_BY_FIELDS)[number];
 
-export const ORDER_BY_DIRECTION = ['asc', 'desc'] as const;
-export type OrderByDirection = (typeof ORDER_BY_DIRECTION)[number];
+export const ORDER_BY_DIRECTIONS = ['asc', 'desc'] as const;
+export type OrderByDirection = (typeof ORDER_BY_DIRECTIONS)[number];
 
-export const NOT_PAYABLE_REASON = ['IN_DISPUTE', 'PAYMENT_PENDING', 'NO_PAY_PERMISSION'] as const;
-export type NotPayableReason = (typeof NOT_PAYABLE_REASON)[number];
+export const NOT_PAYABLE_REASONS = ['IN_DISPUTE', 'PAYMENT_PENDING', 'NO_PAY_PERMISSION'] as const;
+export type NotPayableReason = (typeof NOT_PAYABLE_REASONS)[number];
 
 export interface ItemKey {
   companyCode: string;

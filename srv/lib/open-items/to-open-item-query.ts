@@ -1,4 +1,4 @@
-import { ITEM_TYPE, ORDER_BY_DIRECTION, ORDER_BY_FIELDS } from '../datasource/types';
+import { ITEM_TYPES, ORDER_BY_DIRECTIONS, ORDER_BY_FIELDS } from '../datasource/types';
 import type {
   ItemType,
   OpenItemQuery,
@@ -23,10 +23,10 @@ const isOrderByField = (value: unknown): value is OrderByField =>
   typeof value === 'string' && (ORDER_BY_FIELDS as readonly string[]).includes(value);
 
 const isOrderByDirection = (value: unknown): value is OrderByDirection =>
-  typeof value === 'string' && (ORDER_BY_DIRECTION as readonly string[]).includes(value);
+  typeof value === 'string' && (ORDER_BY_DIRECTIONS as readonly string[]).includes(value);
 
 const isItemType = (value: unknown): value is ItemType =>
-  typeof value === 'string' && (ITEM_TYPE as readonly string[]).includes(value);
+  typeof value === 'string' && (ITEM_TYPES as readonly string[]).includes(value);
 
 export const fieldOf = (token: unknown): string | undefined => {
   if (typeof token !== 'object' || token === null || !('ref' in token)) return undefined;
