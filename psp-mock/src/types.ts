@@ -1,6 +1,9 @@
 export const CHECKOUT_STATUSES = ['OPEN', 'SUCCEEDED', 'FAILED', 'EXPIRED', 'CANCELLED'] as const;
 export type CheckoutStatus = (typeof CHECKOUT_STATUSES)[number];
 
+export const PAY_OUTCOMES = ['success', 'decline'] as const;
+export type PayOutcome = (typeof PAY_OUTCOMES)[number];
+
 export interface CheckoutInput {
   amount: string; // "350.00": always two decimals, never a number
   currency: string;

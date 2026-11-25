@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { CheckoutStore } from './store';
-import type { Checkout, CheckoutInput } from './types';
+import { PAY_OUTCOMES, type PayOutcome, type Checkout, type CheckoutInput } from './types';
 
 const AMOUNT_RE = /^\d+\.\d{2}$/;
 const CURRENCY_RE = /^[A-Z]{3}$/;
@@ -99,7 +99,7 @@ export const findByReference = (store: CheckoutStore, reference: string): Checko
   return [...store.checkouts.values()].filter((checkout) => checkout.reference === reference);
 };
 
-const isOpen = (checkout: Checkout, now: Date): boolean => {
+export const isOpen = (checkout: Checkout, now: Date): boolean => {
   return checkout.status === 'OPEN' && new Date(checkout.expiresAt) >= now;
 };
 
@@ -112,8 +112,6 @@ export const cancelCheckout = (store: CheckoutStore, id: string, now: Date): Can
   checkout.status = 'CANCELLED';
   return { kind: 'cancelled', checkout };
 };
-
-export type PayOutcome = 'success' | 'decline';
 
 export type PayResult =
   { kind: 'processed'; checkout: Checkout } | { kind: 'not_open' } | { kind: 'not_found' };
@@ -148,4 +146,51 @@ export const expireCheckouts = (store: CheckoutStore, now: Date): Checkout[] => 
   }
 
   return expired;
+};
+
+export interface PayRequest {
+  outcome: PayOutcome;
+  duplicateWebhook: boolean;
+  delaySeconds: number;
+  suppressWebhook: boolean;
+}
+
+const isPayOutcome = (value: unknown): value is PayOutcome =>
+  typeof value === 'string' && (PAY_OUTCOMES as readonly string[]).includes(value);
+
+export const parsePayRequest = (body: unknown): PayRequest => {
+  if (typeof body !== 'object' || body === null)
+    throw new CheckoutValidationError('Body must be a JSON object');
+
+  if (!('outcome' in body)) throw new CheckoutValidationError('outcome is required');
+  if (!isPayOutcome(body.outcome)) throw new CheckoutValidationError('outcome is invalid');
+  const outcome = body.outcome;
+
+  const rawDuplicateWebhook = 'duplicateWebhook' in body ? body.duplicateWebhook : undefined;
+  if (rawDuplicateWebhook !== undefined && typeof rawDuplicateWebhook !== 'boolean')
+    throw new CheckoutValidationError('duplicateWebhook is invalid');
+  const duplicateWebhook = rawDuplicateWebhook ?? false;
+
+  const rawDelaySeconds = 'delaySeconds' in body ? body.delaySeconds : undefined;
+  if (
+    rawDelaySeconds !== undefined &&
+    (typeof rawDelaySeconds !== 'number' ||
+      !Number.isInteger(rawDelaySeconds) ||
+      rawDelaySeconds < 0 ||
+      rawDelaySeconds > 120)
+  )
+    throw new CheckoutValidationError('delaySeconds is invalid');
+  const delaySeconds = rawDelaySeconds ?? 0;
+
+  const rawSuppressWebhook = 'suppressWebhook' in body ? body.suppressWebhook : undefined;
+  if (rawSuppressWebhook !== undefined && typeof rawSuppressWebhook !== 'boolean')
+    throw new CheckoutValidationError('suppressWebhook is invalid');
+  const suppressWebhook = rawSuppressWebhook ?? false;
+
+  return {
+    outcome,
+    duplicateWebhook,
+    delaySeconds,
+    suppressWebhook,
+  };
 };

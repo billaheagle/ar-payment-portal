@@ -7,6 +7,7 @@ import {
   expireCheckouts,
   findByReference,
   parseCheckoutInput,
+  parsePayRequest,
   payCheckout,
 } from '../src/checkouts';
 import type { CreateContext, CreateResult } from '../src/checkouts';
@@ -38,9 +39,13 @@ const created = (key = 'key-1', overrides: Partial<CheckoutInput> = {}): Checkou
 };
 
 // Checks both the error class and that the message names the right field
-const expectInvalid = (body: unknown, field: RegExp): void => {
+const expectInvalid = (
+  body: unknown,
+  field: RegExp,
+  parse: (body: unknown) => unknown = parseCheckoutInput,
+): void => {
   assert.throws(
-    () => parseCheckoutInput(body),
+    () => parse(body),
     (err) => err instanceof CheckoutValidationError && field.test(err.message),
   );
 };
@@ -355,5 +360,52 @@ describe('expireCheckouts (spec 11.3)', () => {
     const expired = expireCheckouts(store, new Date('2026-11-01T00:30:00.000Z'));
     assert.deepEqual(expired, []);
     assert.equal(checkoutA.status, 'OPEN');
+  });
+});
+
+describe('parsePayRequest (spec 11.3)', () => {
+  it('fills defaults when only outcome is sent', () => {
+    assert.deepEqual(parsePayRequest({ outcome: 'success' }), {
+      outcome: 'success',
+      duplicateWebhook: false,
+      delaySeconds: 0,
+      suppressWebhook: false,
+    });
+  });
+
+  it('keeps options that are sent', () => {
+    // TODO: { outcome: 'decline', duplicateWebhook: true, delaySeconds: 15, suppressWebhook: true }
+    //       → deepEqual the same object
+    assert.deepEqual(
+      parsePayRequest({
+        outcome: 'decline',
+        duplicateWebhook: true,
+        delaySeconds: 15,
+        suppressWebhook: true,
+      }),
+      { outcome: 'decline', duplicateWebhook: true, delaySeconds: 15, suppressWebhook: true },
+    );
+  });
+
+  it('accepts delaySeconds at the limits', () => {
+    assert.doesNotThrow(() => parsePayRequest({ outcome: 'success', delaySeconds: 0 }));
+    assert.doesNotThrow(() => parsePayRequest({ outcome: 'success', delaySeconds: 120 }));
+  });
+
+  it('rejects a missing or unknown outcome', () => {
+    expectInvalid({}, /outcome/, parsePayRequest);
+    expectInvalid({ outcome: 'maybe' }, /outcome/, parsePayRequest);
+  });
+
+  it('rejects invalid options', () => {
+    [-1, 121, 1.5, '15'].forEach((second) => {
+      expectInvalid({ outcome: 'success', delaySeconds: second }, /delaySeconds/, parsePayRequest);
+    });
+    expectInvalid(
+      { outcome: 'success', duplicateWebhook: 'true' },
+      /duplicateWebhook/,
+      parsePayRequest,
+    );
+    expectInvalid({ outcome: 'success', suppressWebhook: 1 }, /suppressWebhook/, parsePayRequest);
   });
 });

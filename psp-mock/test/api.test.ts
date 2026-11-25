@@ -25,12 +25,14 @@ interface ErrorBody {
 
 describe('Mock PSP API (spec 11.2)', () => {
   let server: Server;
+  let rootUrl = '';
   let baseUrl = '';
 
   before(async () => {
     server = createApp(config, createStore()).listen(0);
     await once(server, 'listening');
-    baseUrl = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}/v1`;
+    rootUrl = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
+    baseUrl = `${rootUrl}/v1`;
   });
 
   after(() => {
@@ -189,5 +191,64 @@ describe('Mock PSP API (spec 11.2)', () => {
     assert.equal(res.status, 404);
     assert.equal(error.code, 'CHECKOUT_NOT_FOUND');
     assert.match(error.message, /not found/);
+  });
+
+  describe('checkout page and pay (spec 11.3)', () => {
+    const createOpenCheckout = async (key: string): Promise<Checkout> => {
+      const res = await request('POST', '/checkouts', { json: body, key });
+      assert.equal(res.status, 201);
+      return (await res.json()) as Checkout;
+    };
+
+    // Browser routes: no API key, no /v1 prefix
+    const page = (id: string) => fetch(`${rootUrl}/checkout/${id}`);
+    const pay = (id: string, json: unknown) =>
+      fetch(`${rootUrl}/checkout/${id}/pay`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(json),
+      });
+
+    it('serves the checkout page as HTML without an API key', async () => {
+      const checkout = await createOpenCheckout('key-page');
+      const res = await page(checkout.id);
+      assert.equal(res.status, 200);
+      assert.match(res.headers.get('content-type') ?? '', /text\/html/);
+
+      const html = await res.text();
+      assert.ok(html.includes(`id="pay-success"`));
+    });
+
+    it('returns 404 for an unknown checkout page', async () => {
+      const res = await page('chk_doesnotexist');
+      assert.equal(res.status, 404);
+    });
+
+    it('pays an open checkout once', async () => {
+      const checkout = await createOpenCheckout('key-pay');
+      const firstPay = await pay(checkout.id, { outcome: 'success' });
+      assert.equal(firstPay.status, 200);
+
+      const data = (await firstPay.json()) as Checkout;
+      assert.equal(data.status, 'SUCCEEDED');
+      assert.match(data.paymentId ?? '', /^pay_[0-9a-f]{24}$/);
+
+      const secondPay = await pay(checkout.id, { outcome: 'success' });
+      assert.equal(secondPay.status, 409);
+      const { error } = (await secondPay.json()) as ErrorBody;
+      assert.equal(error.code, 'CHECKOUT_NOT_OPEN');
+
+      const res = await page(checkout.id);
+      const html = await res.text();
+      assert.ok(html.includes('Checkout is no longer open'));
+    });
+
+    it('rejects an invalid pay request (400)', async () => {
+      const checkout = await createOpenCheckout('key-pay-invalid');
+      const payment = await pay(checkout.id, { outcome: 'maybe' });
+      assert.equal(payment.status, 400);
+      const { error } = (await payment.json()) as ErrorBody;
+      assert.equal(error.code, 'VALIDATION_FAILED');
+    });
   });
 });
